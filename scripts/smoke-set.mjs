@@ -36,5 +36,5 @@ if (status !== 200) fail(`status ${status}`);
 if (payload.prints?.length !== 6) fail("expected 6 prints");
 if (!payload.prints.every((p) => p.inks.every((c) => /^#[0-9A-F]{6}$/i.test(c)))) fail("inks not snapped to palette hex");
 if (!claudeRequest?.output_config?.format || claudeRequest.tool_choice) fail("Claude request shape changed");
-if (!claudeRequest.messages[0].content.includes("clearly different")) fail("subject prompt missing");
+if (!claudeRequest.messages[0].content.includes("instantly recognizable")) fail("subject prompt missing");
 console.log(`✓ smoke: ${payload.edition}, 6 prints, inks ${JSON.stringify(payload.prints[0].inks)}, effort ${claudeRequest.output_config.effort}`);

@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 import { redis, redisConfig, keys, slug, locate } from "../lib/store.js";
 import { findCity } from "../lib/cities.js";
-import { PALETTE, toPaletteInks } from "../lib/palette.js";
+import { PASTELS, LINE_INKS, toPaletteInks } from "../lib/palette.js";
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
@@ -108,51 +108,47 @@ async function createSet(cityKey, place, step) {
   return wrote ? set : await redis.get(keys.set(cityKey));
 }
 
-// Local, story-driven choices of what to draw, each drawn as one or two simple objects (never a scene),
-// all six clearly different, inked in 1-3 colors from the shared printmaker palette.
+// Recognizable icons of the place, each drawn as one or two simple objects (never a scene), all six clearly
+// different, inked in 2-4 colors from the shared pastel palette.
 function subjectPrompt(where) {
   return `You are curating a set of 6 tiny art prints sold from a vending machine in ${where}.
-The prints should feel like a local's inside joke or a love letter, not a tourism poster.
-
-Pick 6 subjects that are whimsical, cultural and specific to this place: food rituals, street characters and
-animals, everyday objects, customs, festivals, local slang made visible, small habits and quirks, niche
-cultural references a resident would smile at. At most ONE well-known landmark, and only if shown in an
-unexpected, playful way. Avoid anything generic that could be from anywhere, and avoid the obvious postcard list.
-If the place is small, draw from its surrounding region.
+Pick 6 things that are iconic and instantly recognizable as this place: its famous foods and drinks, landmarks,
+well-known symbols, beloved local animals and everyday objects that everyone associates with it. Anyone who has visited
+(or seen it in films) should recognize each one right away. One or two can be charming or playful, but avoid obscure or
+insider-only references. If the place is small, draw from its surrounding region.
 
 All six must be clearly different from each other: never two of the same kind of thing (one pizza at most, one cat at
-most, one coffee at most, and so on), and spread them across different categories: food or drink, an animal, an everyday
-object, something worn or carried, a small local custom or ritual.
+most, one coffee at most, and so on), spread across different categories (food or drink, a landmark or symbol, an
+animal, an everyday object, something worn or carried).
 
-Each print is a simple drawing of ONE main object (at most two), not a scene: tell the local story through which
-object you pick and one small playful detail on it, never through a setting, a crowd, a room or a background.
+Each print is a simple drawing of ONE main object (at most two), not a scene: no setting, no crowd, no room, no
+background, and no people unless the subject itself is one iconic figure.
 
-For each print give an id, a 1–4 word English title (can be playful), a short location label for the card, and
-"subject_zh": one sentence in Chinese for an illustrator describing just that object (or pair): what it is, its most
-recognizable silhouette or pose, and the one small detail that makes it local and charming. Nothing with written words.
+For each print give an id, a 1–4 word English title, a short location label for the card, and "subject_zh": one
+sentence in Chinese for an illustrator describing just that object: what it is, its most recognizable silhouette or
+pose, and at most one small charming detail. Nothing with written words.
 
-Ink each print like a real hand-pulled mini print: usually ONE ink or two, at most three, chosen by name from this
-palette only: ${Object.keys(PALETTE).join(", ")}. Pick soft, charming combinations that suit the object (a
-blue enamel mug in cobalt alone; a cake in cherry red and blush pink; blueberries in cobalt and forest green).
-The white paper is not an ink and never needs listing.`;
+Ink each print in 2 to 4 colors, chosen by name from this palette only. Pick 1 to 3 pastels:
+${Object.keys(PASTELS).join(", ")}; and exactly ONE soft deep ink for the thin linework: ${Object.keys(LINE_INKS).join(", ")}.
+Choose cute, harmonious combinations that suit the object. The white paper is not an ink and never needs listing.`;
 }
 
-// The shape of one city's set. Counts (exactly 6 prints, 1-3 inks) are checked in code after parsing.
+// The shape of one city's set. Counts (exactly 6 prints, 2-4 inks) are checked in code after parsing.
 const PRINT_SET_SCHEMA = {
   type: "object",
   properties: {
     edition: { type: "string", description: 'The place name as it should appear on the machine, e.g. "Chicago" or "Lower Manhattan".' },
     prints: {
       type: "array",
-      description: "Exactly six prints, all clearly different kinds of things.",
+      description: "Exactly six prints: recognizable icons of the place, all clearly different kinds of things.",
       items: {
         type: "object",
         properties: {
           id: { type: "string", description: "Short lowercase slug, unique within the set." },
-          title: { type: "string", description: "1–4 word English name for the print (can be playful)." },
+          title: { type: "string", description: "1–4 word English name of the subject." },
           where: { type: "string", description: "Short English location label printed on the card (a street, neighborhood, park or venue; max 24 characters)." },
-          subject_zh: { type: "string", description: "One sentence in Chinese describing just the one object (or pair) for an illustrator: what it is, its most recognizable silhouette or pose, and the one small detail that makes it local and charming. No scene, no background, nothing with written words." },
-          inks: { type: "array", items: { type: "string" }, description: "1 to 3 ink names from the palette (usually one or two)." },
+          subject_zh: { type: "string", description: "One sentence in Chinese describing just that object for an illustrator: what it is, its most recognizable silhouette or pose, and at most one small charming detail. No scene, no background, nothing with written words." },
+          inks: { type: "array", items: { type: "string" }, description: "1 to 3 pastel ink names plus exactly one line ink name, all from the palette." },
         },
         required: ["id", "title", "where", "subject_zh", "inks"],
         additionalProperties: false,
