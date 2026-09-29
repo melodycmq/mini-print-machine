@@ -498,7 +498,7 @@
     const { key, id } = card.dataset;
     const entry = getStash(key)[id];
     const local = key === LOCAL.key ? LOCAL.prints.find((x) => x.id === id) : null;
-    showPrint(local ? { ...local } : { id, ...entry }, { instant: true, set: SET });
+    showPrint(local ? { ...local } : { id, ...entry }, { instant: true, set: SET, fromEl: card.querySelector(".mini") });
   });
 
   // ---------- slots ----------
@@ -662,7 +662,19 @@
     inside.setAttribute("aria-label", `${p.title}, ${p.where}`);
   }
 
-  async function showPrint(p, { instant, set, ready }) {
+  // Grow a card from `fromEl` (a print in the stash) to where it sits in the viewer, or back again.
+  // Classic FLIP: measure both boxes, then animate the transform between them.
+  let viewFrom = null;
+  function morph(fromEl, reverse) {
+    const a = fromEl.getBoundingClientRect(), b = card.getBoundingClientRect();
+    const shrunk = `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${a.width / b.width}, ${a.height / b.height})`;
+    const frames = [{ transform: shrunk, transformOrigin: "0 0" }, { transform: "none", transformOrigin: "0 0" }];
+    const duration = reverse ? 360 : 460;
+    const anim = card.animate(reverse ? frames.reverse() : frames, { duration, easing: "cubic-bezier(.2,.85,.25,1)", fill: reverse ? "forwards" : "none" });
+    return Promise.race([anim.finished, sleep(duration + 150)]); // never let a stalled animation block closing
+  }
+
+  async function showPrint(p, { instant, set, ready, fromEl }) {
     busy = true;
     putOnCard(p);
     $("again").hidden = instant;
@@ -683,6 +695,11 @@
     if (instant) {
       inside.classList.add("inked", "rolled", "signed");
       actions.classList.add("show");
+      if (fromEl && !RM) {
+        viewFrom = fromEl;
+        fromEl.style.visibility = "hidden"; // the print "leaves" the envelope while it's being viewed
+        morph(fromEl, false);
+      }
       overlay.focus();
       return;
     }
@@ -756,7 +773,15 @@
   async function closeOverlay() {
     if (overlay.hidden || !actions.classList.contains("show")) return;
     overlay.classList.remove("show");
-    await wait(300);
+    if (viewFrom?.isConnected && overlay.classList.contains("viewing") && !RM) {
+      await morph(viewFrom, true).catch(() => {}); // shrink back into its spot in the envelope
+      viewFrom.style.visibility = "";
+      card.getAnimations().forEach((an) => an.cancel());
+    } else {
+      if (viewFrom) viewFrom.style.visibility = "";
+      await wait(300);
+    }
+    viewFrom = null;
     overlay.hidden = true;
     busy = false;
     slotEls.forEach((s) => s.removeAttribute("aria-disabled"));

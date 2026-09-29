@@ -322,7 +322,8 @@ footer a { color: var(--red); }
   --cw: min(210px, 40vw);
 }
 .overlay.show { opacity: 1; }
-.overlay.viewing { --cw: min(320px, 72vw); cursor: zoom-out; }
+.overlay.viewing { --cw: min(320px, 72vw); cursor: zoom-out; opacity: 1; background: transparent; transition: background-color .4s; }
+.overlay.viewing.show { background: var(--veil); }
 .overlay.viewing .press-bar, .overlay.viewing .actions { display: none; }
 .overlay.viewing .press { padding-bottom: 0; }
 .press { display: grid; justify-items: center; padding-bottom: 50px; }
