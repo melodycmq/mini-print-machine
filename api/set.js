@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { redis, keys, slug, locate } from "../lib/store.js";
+import { redis, redisConfig, keys, slug, locate } from "../lib/store.js";
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
@@ -42,8 +42,7 @@ export default async function handler(req, res) {
 function missingConfig() {
   const need = [];
   if (!process.env.ANTHROPIC_API_KEY) need.push("ANTHROPIC_API_KEY");
-  if (!(process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL)) need.push("KV_REST_API_URL (Upstash Redis)");
-  if (!(process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)) need.push("KV_REST_API_TOKEN (Upstash Redis)");
+  if (!redisConfig()) need.push("Upstash Redis (KV_REST_API_URL + KV_REST_API_TOKEN, or REDIS_URL)");
   return need;
 }
 
