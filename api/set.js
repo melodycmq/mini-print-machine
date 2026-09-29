@@ -114,17 +114,20 @@ function cleanInks(inks) {
   return ok.length >= 3 ? ok : DEFAULT_INKS;
 }
 
+// The original subject prompt; the only addition is the 3–4 vivid inks each print needs for the ink-layer printing.
 function subjectPrompt(where) {
   return `You are curating a set of 6 tiny art prints sold from a vending machine in ${where}.
-The prints should feel like a local's inside joke or a love letter, not a tourism poster.
+Pick 6 things that are iconic, interesting or quietly beautiful about this specific place, the kind a local would smile at:
+a mix of landmarks, food, street life, nature and small everyday details. Avoid generic subjects that could be anywhere.
+If the place is small, draw from its surrounding area.
 
-Pick 6 subjects that are whimsical, cultural and specific to this place: food rituals, street characters and
-animals, everyday objects, customs, festivals, local slang made visible, small habits and quirks, niche
-cultural references a resident would smile at. At most ONE well-known landmark, and only if you show it in
-an unexpected, playful way. Avoid anything generic that could be from anywhere, and avoid the obvious
-postcard list. If the place is small, draw from its surrounding region.
+For each print give an id, a 1–4 word English title, a short location label for the card, and "subject_zh": one sentence
+in Chinese describing only the subject for an illustrator: what it is, its most recognizable silhouette or pose, and at
+most one small hint of setting. Nothing with written words on it.
 
-Return the six prints and the edition name in the required format.`;
+Also give each print 3 or 4 ink colors as hex codes: vivid, saturated and clean (think fresh screen-print inks), chosen to
+suit the subject, lightest to darkest. No muddy, greyed, brown-grey or olive tones, and no near-whites. The last one is a
+deep ink for the thin structural lines.`;
 }
 
 // The shape of one city's set. Counts (exactly 6 prints, 3–4 inks) are checked in code after parsing.
@@ -139,12 +142,12 @@ const PRINT_SET_SCHEMA = {
         type: "object",
         properties: {
           id: { type: "string", description: "Short lowercase slug, unique within the set." },
-          title: { type: "string", description: "1–4 word English name for the print (can be playful)." },
-          where: { type: "string", description: "Short English location label printed on the card (a street, neighborhood or venue; max 24 characters)." },
-          subject_zh: { type: "string", description: "One or two sentences in Chinese for an illustrator: the subject, what it is doing, its most recognizable silhouette or gesture, and the small story or feeling of the moment. No written words, signs with text, logos or numbers in the scene." },
+          title: { type: "string", description: "1–4 word English name of the subject." },
+          where: { type: "string", description: "Short English location label printed on the card (a street, neighborhood, park or venue; max 24 characters)." },
+          subject_zh: { type: "string", description: "One sentence in Chinese describing only the subject for an illustrator: what it is, its most recognizable silhouette or pose, and at most one small hint of setting. Nothing with written words on it." },
           inks: {
             type: "array", items: { type: "string" },
-            description: "3 or 4 spot ink colors as hex codes (like #1F4686) that suit this subject, lightest to darkest. The last is a deep key ink for the thin structural lines. Bold, printable colors; no near-whites.",
+            description: "3 or 4 vivid, saturated, clean ink colors as hex codes (like #1F4686), lightest to darkest; the last is a deep ink for thin structural lines. No muddy or greyed tones, no near-whites.",
           },
         },
         required: ["id", "title", "where", "subject_zh", "inks"],
