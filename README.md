@@ -47,7 +47,7 @@ Locally there are no geolocation headers, so the machine uses New York unless yo
 | `IMAGE_MODEL` | `gpt-image-2` | Image model (`gpt-image-1` or `gpt-image-1-mini` are older, cheaper options) |
 | `IMAGE_QUALITY` | `low` | `low` / `medium` / `high` (slower and pricier as it goes up) |
 | `DAILY_GENERATION_CAP` | `150` | Max new images per day across all visitors; after that everyone gets New York |
-| `GENERATIONS_PER_IP_PER_HOUR` | `30` | Per-visitor limit on new images (cached prints don't count) |
+| `GENERATIONS_PER_IP_PER_HOUR` | `60` | Per-visitor limit on new images (cached prints don't count) |
 
 ## Scripts
 

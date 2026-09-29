@@ -243,15 +243,43 @@
     window.MiniPrintMap?.travel(false);
   }
 
+  // Minutes until the hourly allowance of new drawings refills, for the friendly "out of ink" note.
+  const minutesUntil = (resetAt) => Math.max(1, Math.ceil(((resetAt || Date.now() + 3600e3) - Date.now()) / 60000));
+  const outOfInk = (resetAt) =>
+    `The machine's out of ink for now ✶ it'll be ready to travel again in about ${minutesUntil(resetAt)} min.`;
+
+  // Would this trip need more new drawings than the visitor has left this hour? Cities that are already drawn
+  // are always fine; unknown answers (a network hiccup) let the trip go ahead.
+  async function tripBlocked(place) {
+    try {
+      const qs = `?city=${encodeURIComponent(place.city)}${place.country ? `&country=${place.country}` : ""}&peek=1`;
+      const [peek, quota] = await Promise.all([fetch("/api/set" + qs), fetch("/api/quota").then((r) => r.json())]);
+      let needed = 6;
+      if (peek.ok) needed = (await peek.json()).prints.filter((p) => !p.image).length;
+      if (!needed || quota.remaining == null) return null;
+      return quota.remaining < needed ? quota : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function travel(place, { switching, first = false }) {
     if (busy) return;
+    if (place && switching && !first) {
+      const blocked = await tripBlocked(place);
+      if (blocked) {
+        cityName.textContent = SET.edition; // stay put: no spin, no map, no color change
+        say(outOfInk(blocked.resetAt));
+        return;
+      }
+    }
     busy = true;
     slotEls.forEach((s) => s.setAttribute("aria-disabled", "true"));
     const started = Date.now();
     say(place ? `Traveling to ${esc(place.city)}…` : "Finding where you are…");
     startSpin(switching);
 
-    let next = null, problem = null;
+    let next = null, problem = null, limitedAt = null;
     try {
       next = await fetchSet(place);
       const missing = next.prints.filter((p) => !p.image);
@@ -260,7 +288,8 @@
       if (missing.length) {
         progress();
         await Promise.race([
-          Promise.allSettled(missing.map((p) => ensureImage(next, p).then(() => { ready++; progress(); }))),
+          Promise.allSettled(missing.map((p) => ensureImage(next, p).then(() => { ready++; progress(); })))
+            .then((results) => { limitedAt = results.find((r) => r.reason?.limited)?.reason; }),
           sleep(170000), // never spin forever; anything unfinished is drawn when it's first pulled
         ]);
       }
@@ -276,7 +305,9 @@
       if (switching) newTheme(); // lands on a color different from the one we left
       else applyTheme();
       SET = next;
-      say("Pick a slot to start.");
+      say(limitedAt
+        ? `Ran low on ink partway ✶ the last few stickers will finish drawing in about ${minutesUntil(limitedAt.resetAt)} min.`
+        : "Pick a slot to start.");
       sfx.chime();
     } else {
       applyTheme(); // the trip didn't happen: back to the color we had
@@ -649,6 +680,10 @@
       if (r.status === 503) {
         const j = await r.json().catch(() => ({}));
         if (j.status === "busy") { await sleep(6000); continue; } // the image service is catching up
+      }
+      if (r.status === 429) {
+        const j = await r.json().catch(() => ({}));
+        throw Object.assign(new Error("limited"), { limited: true, resetAt: j.resetAt });
       }
       throw new Error(`print ${r.status}`);
     }

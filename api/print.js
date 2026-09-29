@@ -35,8 +35,8 @@ export default async function handler(req, res) {
     // (the daily budget still applies).
     const admin = process.env.ADMIN_TOKEN && req.headers["x-admin-token"] === process.env.ADMIN_TOKEN;
     if (!admin) {
-      const { success } = await ratelimit.limit(visitorId(req));
-      if (!success) return res.status(429).json({ status: "limited", reason: "rate" });
+      const { success, reset } = await ratelimit.limit(visitorId(req));
+      if (!success) return res.status(429).json({ status: "limited", reason: "rate", resetAt: reset });
     }
     if (!(await takeFromDailyBudget())) return res.status(503).json({ status: "limited", reason: "budget" });
     charged = true;

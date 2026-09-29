@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 import { redis, redisConfig, keys, slug, locate } from "../lib/store.js";
 import { findCity } from "../lib/cities.js";
-import { PASTELS, LINE_INKS, toPaletteInks } from "../lib/palette.js";
+import { BRIGHTS, PASTELS, toPaletteInks } from "../lib/palette.js";
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     if (missing.length) throw Object.assign(new Error(`missing env: ${missing.join(", ")}`), { hint: missing });
     step.name = "redis";
     let set = await redis.get(keys.set(cityKey));
+    if (!set && req.query?.peek) return res.status(404).json({ key: cityKey, saved: false }); // just checking
     if (!set) set = await createSet(cityKey, place, step);
     step.name = "redis";
     const images = await redis.mget(...set.prints.map((p) => keys.image(cityKey, p.id)));
@@ -109,7 +110,7 @@ async function createSet(cityKey, place, step) {
 }
 
 // Recognizable icons of the place, each drawn as one or two simple objects (never a scene), all six clearly
-// different, inked in 2-4 colors from the shared pastel palette.
+// different, inked in one bright theme-family ink plus 1-2 pastels.
 function subjectPrompt(where) {
   return `You are curating a set of 6 tiny art prints sold from a vending machine in ${where}.
 Pick 6 things that are iconic and instantly recognizable as this place: its famous foods and drinks, landmarks,
@@ -128,9 +129,12 @@ For each print give an id, a 1–4 word English title, a short location label fo
 sentence in Chinese for an illustrator describing just that object: what it is, its most recognizable silhouette or
 pose, and at most one small charming detail. Nothing with written words.
 
-Ink each print in 2 to 4 colors, chosen by name from this palette only. Pick 1 to 3 pastels:
-${Object.keys(PASTELS).join(", ")}; and exactly ONE soft deep ink for the thin linework: ${Object.keys(LINE_INKS).join(", ")}.
-Choose cute, harmonious combinations that suit the object. The white paper is not an ink and never needs listing.`;
+Ink each print like a cheerful hand-pulled print, choosing colors by name from this palette only:
+- exactly ONE bright hero ink (rarely two): ${Object.keys(BRIGHTS).join(", ")}. It carries the main shape and also draws the
+  thin lines, so pick the one that best suits the object.
+- one or two soft pastels to fill around it: ${Object.keys(PASTELS).join(", ")}.
+Aim for a clear, happy contrast between the bright and the pastels (a slice in tomato with butter and peach; a coffee cup in
+cobalt with sky; a pigeon in violet with lilac and mint). No black. The white paper is not an ink and never needs listing.`;
 }
 
 // The shape of one city's set. Counts (exactly 6 prints, 2-4 inks) are checked in code after parsing.
@@ -148,7 +152,7 @@ const PRINT_SET_SCHEMA = {
           title: { type: "string", description: "1–4 word English name of the subject." },
           where: { type: "string", description: "Short English location label printed on the card (a street, neighborhood, park or venue; max 24 characters)." },
           subject_zh: { type: "string", description: "One sentence in Chinese describing just that object for an illustrator: what it is, its most recognizable silhouette or pose, and at most one small charming detail. No scene, no background, nothing with written words." },
-          inks: { type: "array", items: { type: "string" }, description: "1 to 3 pastel ink names plus exactly one line ink name, all from the palette." },
+          inks: { type: "array", items: { type: "string" }, description: "One bright ink name (rarely two) plus one or two pastel ink names, all from the palette." },
         },
         required: ["id", "title", "where", "subject_zh", "inks"],
         additionalProperties: false,
