@@ -11,9 +11,15 @@ export default async function handler(req, res) {
   const place = locate(req);
   const cityKey = [slug(place.city), slug(place.country || "x")].join("--");
 
+  // Which step failed goes back to the browser (no secrets), so a broken setup is easy to spot.
+  const step = { name: "config" };
   try {
+    const missing = missingConfig();
+    if (missing.length) throw Object.assign(new Error(`missing env: ${missing.join(", ")}`), { hint: missing });
+    step.name = "redis";
     let set = await redis.get(keys.set(cityKey));
-    if (!set) set = await createSet(cityKey, place);
+    if (!set) set = await createSet(cityKey, place, step);
+    step.name = "redis";
     const images = await redis.mget(...set.prints.map((p) => keys.image(cityKey, p.id)));
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json({
@@ -24,12 +30,25 @@ export default async function handler(req, res) {
       prints: set.prints.map((p, i) => ({ id: p.id, title: p.title, where: p.where, image: images[i] || null })),
     });
   } catch (err) {
-    console.error("set failed", cityKey, err);
-    res.status(502).json({ error: "Couldn't load prints for this area." });
+    console.error("set failed", cityKey, step.name, err);
+    res.status(502).json({
+      error: "Couldn't load prints for this area.",
+      step: step.name,
+      detail: err.hint ? `Missing environment variables: ${err.hint.join(", ")}` : err.status ? `HTTP ${err.status}: ${err.error?.error?.type || err.name}` : err.name,
+    });
   }
 }
 
-async function createSet(cityKey, place) {
+function missingConfig() {
+  const need = [];
+  if (!process.env.ANTHROPIC_API_KEY) need.push("ANTHROPIC_API_KEY");
+  if (!(process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL)) need.push("KV_REST_API_URL (Upstash Redis)");
+  if (!(process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)) need.push("KV_REST_API_TOKEN (Upstash Redis)");
+  return need;
+}
+
+async function createSet(cityKey, place, step) {
+  step.name = "claude";
   const where = [place.city, place.region, place.country].filter(Boolean).join(", ");
   const msg = await anthropic.messages.create({
     model: MODEL,
@@ -55,6 +74,7 @@ Reply with JSON only, no prose: {"edition": "...", "prints": [{"id": "...", "tit
     }],
   });
 
+  step.name = "parse-claude-reply";
   const text = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("");
   const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
   const seen = new Set();
@@ -73,6 +93,7 @@ Reply with JSON only, no prose: {"edition": "...", "prints": [{"id": "...", "tit
 
   const set = { edition: String(json.edition || place.city).slice(0, 40), prints, createdAt: Date.now() };
   // If two first visitors race, keep whichever set landed first so everyone in the area shares one.
+  step.name = "redis";
   const wrote = await redis.set(keys.set(cityKey), set, { nx: true });
   return wrote ? set : await redis.get(keys.set(cityKey));
 }
