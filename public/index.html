@@ -270,7 +270,7 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .envelopes { display: grid; grid-template-columns: repeat(auto-fill, 190px); justify-content: center; gap: 48px 200px; align-items: end; }
 /* The envelope stays 190px wide; the prints that come out are sized on their own (92px) so they read clearly. */
 /* Room for the fanned prints is always reserved, so opening or closing an envelope never moves the page. */
-.env-item { padding-top: 168px; }
+.env-item { padding-top: 128px; }
 .env { position: relative; aspect-ratio: 1.55; perspective: 700px; }
 .env::after { content: ""; position: absolute; inset: 0; z-index: 0; transform: translate(5px, 6px); background: var(--shade-out); filter: url(#rough); }
 .env-body {
@@ -301,7 +301,7 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
   transform: translateY(15%) scale(.92); transition: transform .5s cubic-bezier(.3,1.25,.5,1);
   transition-delay: calc((var(--k) + 3) * 30ms); pointer-events: none;
 }
-.env-item.open .env-card { transform: translateX(calc(var(--k) * 64px)) translateY(-112%) rotate(calc(var(--k) * 3deg)); pointer-events: auto; cursor: zoom-in; }
+.env-item.open .env-card { transform: translateX(calc(var(--k) * 64px)) translateY(-94%) rotate(calc(var(--k) * 3deg)); pointer-events: auto; cursor: zoom-in; }
 .env-card .mini {
   position: relative; display: grid; place-items: center; width: 100%; height: 100%; padding: 10%;
   background: var(--paper-grain), #FBF8F1; box-shadow: 0 0 0 1px rgb(42 45 94 / .14), 2px 3px 0 rgb(42 45 94 / .14);
@@ -310,6 +310,7 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .env-card .mini .art { aspect-ratio: 1; height: auto; }
 .env-card .mini .art.photo { position: absolute; inset: 6%; aspect-ratio: auto; height: auto; }
 .env-item.open .env-card:hover .mini, .env-card:focus-visible .mini { transform: translateY(-8px) rotate(-1deg); }
+body:has(.overlay.viewing:not([hidden])) .env-card .mini { transform: none !important; transition: none; } /* hold still while it's being viewed */
 
 footer { font-family: var(--hand); font-size: .88rem; color: color-mix(in srgb, var(--on-page) 75%, transparent); text-align: center; line-height: 1.35; text-wrap: balance; } /* one line where it fits; wraps evenly on phones */
 footer a { color: var(--red); }

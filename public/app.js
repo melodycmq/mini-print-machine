@@ -665,10 +665,16 @@
   // Grow a card from `fromEl` (a print in the stash) to where it sits in the viewer, or back again.
   // Classic FLIP: measure both boxes, then animate the transform between them.
   let viewFrom = null;
+  // The stash print is tilted in its fan, so match its real size, center and angle (its bounding box would be
+  // a bit larger than the print and make the animation end with a small jump).
   function morph(fromEl, reverse) {
     const a = fromEl.getBoundingClientRect(), b = card.getBoundingClientRect();
-    const shrunk = `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${a.width / b.width}, ${a.height / b.height})`;
-    const frames = [{ transform: shrunk, transformOrigin: "0 0" }, { transform: "none", transformOrigin: "0 0" }];
+    const tilt = fromEl.closest(".env-card");
+    const m = new DOMMatrixReadOnly(tilt ? getComputedStyle(tilt).transform : "none");
+    const angle = Math.atan2(m.b, m.a);
+    const dx = a.left + a.width / 2 - (b.left + b.width / 2), dy = a.top + a.height / 2 - (b.top + b.height / 2);
+    const shrunk = `translate(${dx}px, ${dy}px) rotate(${angle}rad) scale(${fromEl.offsetWidth / b.width}, ${fromEl.offsetHeight / b.height})`;
+    const frames = [{ transform: shrunk, transformOrigin: "50% 50%" }, { transform: "none", transformOrigin: "50% 50%" }];
     const duration = reverse ? 360 : 460;
     const anim = card.animate(reverse ? frames.reverse() : frames, { duration, easing: "cubic-bezier(.2,.85,.25,1)", fill: reverse ? "forwards" : "none" });
     return Promise.race([anim.finished, sleep(duration + 150)]); // never let a stalled animation block closing
