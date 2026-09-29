@@ -271,7 +271,7 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 /* The envelope stays 190px wide; the prints that come out are sized on their own (92px) so they read clearly. */
 /* Room for the fanned prints is always reserved, so opening or closing an envelope never moves the page. */
 .env-item { padding-top: 80px; transition: padding-top .45s cubic-bezier(.3,1.2,.5,1); } /* same as the space below the envelopes to the footer */
-.env-item.open { padding-top: 128px; }
+.env-item.open { padding-top: 156px; }
 .env { position: relative; aspect-ratio: 1.55; perspective: 700px; }
 .env::after { content: ""; position: absolute; inset: 0; z-index: 0; transform: translate(5px, 6px); background: var(--shade-out); filter: url(#rough); }
 .env-body {
@@ -296,21 +296,33 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
   transform-origin: 50% 0; transition: transform .45s cubic-bezier(.4,0,.2,1), z-index 0s .2s;
   filter: drop-shadow(0 1.5px 0 rgb(42 45 94 / .45));
 }
-.env-flap::before { content: ""; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); background: var(--paper-grain), #EFE6D2; }
+.env-flap::before { content: ""; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); background: var(--paper-grain), #EFE6D2; transition: background-color .45s; }
+/* Open: the flap stands up behind the prints, showing its slightly darker inside. */
+.env-item.open .env-flap::before { background: var(--paper-grain), #E2D6BC; }
+/* Open: the envelope's back shows above its V-shaped front, like looking into the pocket. */
+/* the area above the V-shaped front */
+.env-body::after { content: ""; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 36%, 0 100%); background: var(--paper-grain), #E2D6BC; opacity: 0; transition: opacity .35s; pointer-events: none; }
+.env-item.open .env-body::after { opacity: 1; }
 .env-item.open .env-flap { transform: rotateX(180deg); z-index: 1; }
-.env-cards { position: absolute; inset: 0; z-index: 2; pointer-events: none; clip-path: inset(-400px -400px 0 -400px); } /* nothing shows below the envelope's bottom edge */
+/* Prints start tucked behind the envelope's front; once they've risen out they come in front of it (and drop back
+   behind as they close). Nothing ever shows below the envelope's bottom edge. */
+.env-cards { position: absolute; inset: 0; z-index: 2; pointer-events: none; clip-path: inset(-400px -400px 0 -400px); transition: z-index 0s; }
+.env-item.open .env-cards { z-index: 6; transition: z-index 0s .22s; }
 .env-card {
   position: absolute; left: 50%; top: 10%; width: 92px; aspect-ratio: 5 / 7; margin-left: -46px;
-  transform: translateY(15%) scale(.92); transition: transform .5s cubic-bezier(.3,1.25,.5,1);
+  transform: translateY(15%) scale(.92); transform-origin: 50% 175%; transition: transform .5s cubic-bezier(.3,1.25,.5,1);
   transition-delay: calc((var(--k) + 3) * 30ms); pointer-events: none;
 }
-.env-item.open .env-card { transform: translateX(calc(var(--k) * 64px)) translateY(-94%) rotate(calc(var(--k) * 3deg)); pointer-events: auto; cursor: zoom-in; }
+/* Fanned in an arch, like a hand of cards: each print pivots around a point well below the envelope. */
+.env-item.open .env-card { transform: translateX(calc(var(--k) * 46px)) translateY(-112%) rotate(calc(var(--k) * 5deg)); pointer-events: auto; cursor: zoom-in; }
 .env-card .mini {
   position: relative; display: grid; grid-template-rows: 1fr auto; gap: 2%; width: 100%; height: 100%; padding: 8% 8% 9%;
-  container-type: inline-size; overflow: hidden;
-  background: var(--paper-grain), #FBF8F1; box-shadow: 0 0 0 1px rgb(42 45 94 / .14), 2px 3px 0 rgb(42 45 94 / .14);
+  container-type: inline-size; isolation: isolate;
   transition: transform .2s cubic-bezier(.3,1.8,.5,1);
 }
+/* Same treatment as the rest of the page: paper with a sketched outline, and a hatched drawn shadow. */
+.env-card .mini::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--paper-grain), #FBF8F1; border: 1.5px solid var(--ink); border-radius: 3px 4px 3px 4px; filter: url(#rough); }
+.env-card .mini::after { content: ""; position: absolute; inset: 0; z-index: -2; transform: translate(4px, 5px); background: var(--shade-out); filter: url(#rough); }
 .env-card .mini.has-photo { padding: 4% 4% 7%; }
 .env-card .mini .art { width: 100%; aspect-ratio: 1; height: auto; align-self: start; } /* matches where the full card puts it */
 .env-card .mini .art.photo, .env-card .mini .art.pending { aspect-ratio: auto; height: 100%; align-self: stretch; }
@@ -349,7 +361,8 @@ footer a { color: var(--red); }
 .mouth { width: var(--cw); height: calc(var(--cw) * 1.4); perspective: 1400px; margin-top: -4px; }
 .mouth.clip { overflow: hidden; }
 .card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transform: translateY(-101%); }
-.card-shade { position: absolute; inset: 0; transform: translate3d(10px, 12px, -1px); background: var(--shade-out); filter: url(#rough); }
+.card-shade { position: absolute; inset: 0; transform: translate3d(10px, 12px, -1px); background: var(--shade-out); filter: url(#rough); transition: opacity .18s; }
+.card.flipping .card-shade { opacity: 0; } /* a flat shadow can't follow a card turning in 3D, so it steps away during the flip */
 .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .inside {
   background: var(--paper-grain), #FBF8F1; padding: 8% 8% 9%; display: grid; grid-template-rows: 1fr auto; gap: 2%;

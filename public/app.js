@@ -735,9 +735,10 @@
     await wait(800);
     card.style.transition = "transform 950ms cubic-bezier(.5,0,.2,1)";
     card.style.transform = OPEN_T;
-    card.classList.add("open");
+    card.classList.add("flipping", "open");
     sfx.swish();
     await wait(1000);
+    card.classList.remove("flipping");
 
     // A brand-new print for this city may still be drawing; the card waits, open, with "inking…".
     let from = set, fellBack = false;
