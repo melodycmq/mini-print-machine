@@ -474,13 +474,14 @@
       const cards = pl.got.map((id, k) => {
         const e = st[id], local = pl.key === LOCAL.key ? LOCAL.prints.find((x) => x.id === id) : null;
         const pr = local ? local : { ...e };
-        return `<button class="env-card" type="button" data-key="${esc(pl.key)}" data-id="${esc(id)}" style="--k:${k - (pl.got.length - 1) / 2}" aria-label="View ${esc(e.title)}" tabindex="-1">
+        return `<button class="env-card" type="button" data-key="${esc(pl.key)}" data-id="${esc(id)}" style="--k:${k - (pl.got.length - 1) / 2};--k2:${(k - (pl.got.length - 1) / 2) ** 2}" aria-label="View ${esc(e.title)}" tabindex="-1">
           <span class="mini${pr.shapes ? "" : " has-photo"}">${artFor(pr, "tile")}<span class="pencil"><span class="t">${esc(e.title || pr.title)}</span><span class="where">${esc(e.where || pr.where)}</span></span></span></button>`;
       }).join("");
       return `<div class="env-item${openEnvelopes.has(pl.key) ? " open" : ""}" data-key="${esc(pl.key)}" style="--stamp:${color[0]};--stamp-deep:${color[1]}">
         <div class="env">
           <div class="env-flap" aria-hidden="true"></div>
           <div class="env-cards">${cards}</div>
+          <div class="env-pocket" aria-hidden="true"></div>
           <button class="env-body" type="button" aria-expanded="${openEnvelopes.has(pl.key)}" aria-label="${esc(pl.edition)}: ${pl.got.length} of ${pl.ids.length} prints${full ? ", full set" : ""}. ${openEnvelopes.has(pl.key) ? "Close" : "Open"} envelope"></button>
           <div class="env-face" aria-hidden="true">
             <span class="env-name">${esc(pl.edition)}</span>
