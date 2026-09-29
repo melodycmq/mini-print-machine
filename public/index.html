@@ -270,7 +270,7 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .envelopes { display: grid; grid-template-columns: repeat(auto-fill, 190px); justify-content: center; gap: 48px 200px; align-items: end; }
 /* The envelope stays 190px wide; the prints that come out are sized on their own (92px) so they read clearly. */
 /* Room for the fanned prints is always reserved, so opening or closing an envelope never moves the page. */
-.env-item { padding-top: 44px; transition: padding-top .45s cubic-bezier(.3,1.2,.5,1); }
+.env-item { padding-top: 80px; transition: padding-top .45s cubic-bezier(.3,1.2,.5,1); } /* same as the space below the envelopes to the footer */
 .env-item.open { padding-top: 128px; }
 .env { position: relative; aspect-ratio: 1.55; perspective: 700px; }
 .env::after { content: ""; position: absolute; inset: 0; z-index: 0; transform: translate(5px, 6px); background: var(--shade-out); filter: url(#rough); }
