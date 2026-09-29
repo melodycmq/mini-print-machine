@@ -261,7 +261,7 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .art.pending span { font-family: var(--display); font-weight: 700; font-size: 1.4rem; letter-spacing: .12em; color: rgb(98 93 122 / .6); animation: blink 1.4s ease-in-out infinite; }
 
 /* ---------- stash ---------- */
-.stash { width: min(100%, 640px); display: grid; gap: 16px; }
+.stash { width: min(100%, 640px); display: grid; gap: 0; margin-bottom: 48px; }
 .stash header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .stash h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 2.2rem; letter-spacing: .08em; text-transform: uppercase; line-height: 1; color: var(--on-page); }
 .stash .tally { font-family: var(--hand); font-size: 1.05rem; color: color-mix(in srgb, var(--on-page) 75%, transparent); }
@@ -269,8 +269,8 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 /* One envelope per place. Click to flip the flap open and slide the prints up out of it; click again to tuck them back. */
 .envelopes { display: grid; grid-template-columns: repeat(auto-fill, 190px); justify-content: center; gap: 48px 200px; align-items: end; }
 /* The envelope stays 190px wide; the prints that come out are sized on their own (92px) so they read clearly. */
-.env-item { padding-top: 0; transition: padding-top .45s cubic-bezier(.3,1.3,.5,1); }
-.env-item.open { padding-top: 158px; }
+/* Room for the fanned prints is always reserved, so opening or closing an envelope never moves the page. */
+.env-item { padding-top: 168px; }
 .env { position: relative; aspect-ratio: 1.55; perspective: 700px; }
 .env::after { content: ""; position: absolute; inset: 0; z-index: 0; transform: translate(5px, 6px); background: var(--shade-out); filter: url(#rough); }
 .env-body {
@@ -295,7 +295,7 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 }
 .env-flap::before { content: ""; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); background: var(--paper-grain), #EFE6D2; }
 .env-item.open .env-flap { transform: rotateX(180deg); z-index: 1; }
-.env-cards { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.env-cards { position: absolute; inset: 0; z-index: 2; pointer-events: none; clip-path: inset(-400px -400px 0 -400px); } /* nothing shows below the envelope's bottom edge */
 .env-card {
   position: absolute; left: 50%; top: 10%; width: 92px; aspect-ratio: 5 / 7; margin-left: -46px;
   transform: translateY(15%) scale(.92); transition: transform .5s cubic-bezier(.3,1.25,.5,1);
