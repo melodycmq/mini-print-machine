@@ -267,9 +267,10 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .stash .tally { font-family: var(--hand); font-size: 1.05rem; color: color-mix(in srgb, var(--on-page) 75%, transparent); }
 .stash .tally b { color: var(--red); }
 /* One envelope per place. Click to flip the flap open and slide the prints up out of it; click again to tuck them back. */
-.envelopes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 40px 56px; align-items: end; }
+.envelopes { display: grid; grid-template-columns: repeat(auto-fill, 190px); justify-content: center; gap: 48px 200px; align-items: end; }
+/* The envelope stays 190px wide; the prints that come out are sized on their own (92px) so they read clearly. */
 .env-item { padding-top: 0; transition: padding-top .45s cubic-bezier(.3,1.3,.5,1); }
-.env-item.open { padding-top: 186px; }
+.env-item.open { padding-top: 158px; }
 .env { position: relative; aspect-ratio: 1.55; perspective: 700px; }
 .env::after { content: ""; position: absolute; inset: 0; z-index: 0; transform: translate(5px, 6px); background: var(--shade-out); filter: url(#rough); }
 .env-body {
@@ -296,11 +297,11 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .env-item.open .env-flap { transform: rotateX(180deg); z-index: 1; }
 .env-cards { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .env-card {
-  position: absolute; left: 50%; top: 10%; width: 40%; aspect-ratio: 5 / 7; margin-left: -20%;
+  position: absolute; left: 50%; top: 10%; width: 92px; aspect-ratio: 5 / 7; margin-left: -46px;
   transform: translateY(15%) scale(.92); transition: transform .5s cubic-bezier(.3,1.25,.5,1);
   transition-delay: calc((var(--k) + 3) * 30ms); pointer-events: none;
 }
-.env-item.open .env-card { transform: translateX(calc(var(--k) * 56%)) translateY(-118%) rotate(calc(var(--k) * 4deg)); pointer-events: auto; cursor: zoom-in; }
+.env-item.open .env-card { transform: translateX(calc(var(--k) * 64px)) translateY(-112%) rotate(calc(var(--k) * 3deg)); pointer-events: auto; cursor: zoom-in; }
 .env-card .mini {
   position: relative; display: grid; place-items: center; width: 100%; height: 100%; padding: 10%;
   background: var(--paper-grain), #FBF8F1; box-shadow: 0 0 0 1px rgb(42 45 94 / .14), 2px 3px 0 rgb(42 45 94 / .14);
