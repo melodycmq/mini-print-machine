@@ -381,16 +381,21 @@ footer a { color: var(--red); }
 .pencil .where { transition-delay: .4s; }
 .inside.signed .pencil > * { clip-path: inset(0 0 0 0); }
 
-.cover-leaf { position: absolute; inset: 0; transform-origin: 0 50%; transform-style: preserve-3d; transition: transform .95s cubic-bezier(.5,0,.2,1); }
-.card.open .cover-leaf { transform: rotateY(-178deg); }
-.leaf-front {
-  background: var(--red); color: var(--panel); display: grid; place-items: center; text-align: center; padding: 12%;
-  background-image: var(--speck), var(--hatch);
+/* The card has two sides: the cover (theme color, like the machine) and the print on the back.
+   It comes out cover-up, then flips over to show the print. */
+.card-flip { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.45,0,.2,1); }
+.card.open .card-flip { transform: rotateY(180deg); }
+.card-flip .inside { transform: rotateY(180deg); }
+.cover-face {
+  container-type: inline-size; display: grid; place-items: center; align-content: center; gap: 10cqw; padding: 12% 10%; text-align: center;
+  background: var(--speck), var(--red); color: var(--panel);
 }
-.leaf-front .seal { display: grid; gap: 4px; justify-items: center; border: 2.5px solid var(--panel); padding: 14px 10px; border-radius: 50% 48% 52% 46%; aspect-ratio: 1; align-content: center; width: 100%; filter: url(#rough); }
-.leaf-front .seal b { font-family: var(--block); font-weight: 900; font-size: clamp(1rem, 4.2vw, 1.35rem); letter-spacing: .08em; line-height: 1; }
-.leaf-front .seal small { font-family: var(--display); font-weight: 700; font-size: clamp(1rem, 4vw, 1.25rem); letter-spacing: .04em; }
-.leaf-front .seal svg { width: 34%; }
+.cover-face::before { content: ""; position: absolute; inset: 5.5cqw; border: 1.5px dashed color-mix(in srgb, var(--panel) 55%, transparent); border-radius: 3px; filter: url(#rough); }
+.cover-title { font-family: var(--block); font-weight: 900; font-size: 19cqw; line-height: .92; letter-spacing: .04em; text-transform: uppercase; transform: rotate(-2deg); }
+.cover-stamp {
+  font-family: var(--block); font-weight: 400; font-size: 6.2cqw; line-height: 1.05; letter-spacing: .1em; text-transform: uppercase;
+  border: 2px solid var(--panel); border-radius: 8px 5px 9px 6px; padding: 2.6cqw 4cqw; transform: rotate(-3deg); filter: url(#rough);
+}
 
 .actions { display: grid; justify-items: center; gap: 10px; opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .35s; pointer-events: none; }
 .actions.show { opacity: 1; transform: none; pointer-events: auto; }
@@ -506,21 +511,18 @@ footer a { color: var(--red); }
     <div class="mouth clip" id="mouth">
       <div class="card" id="card">
         <div class="card-shade" aria-hidden="true"></div>
-        <div class="face inside" id="inside">
-          <div id="art-slot"></div>
-          <div class="pencil">
-            <span class="t" id="p-title"></span>
-            <span class="where" id="p-where"></span>
+        <div class="card-flip">
+          <div class="face cover-face" aria-hidden="true">
+            <b class="cover-title">Mini<br>Print</b>
+            <span class="cover-stamp">Hand-pulled<br>in your city</span>
           </div>
-          <div class="brayer" aria-hidden="true"></div>
-        </div>
-        <div class="cover-leaf">
-          <div class="face leaf-front">
-            <div class="seal">
-              <b>MINI<br>PRINT</b>
-              <span id="seal-coin"></span>
-              <small>a surprise for you</small>
+          <div class="face inside" id="inside">
+            <div id="art-slot"></div>
+            <div class="pencil">
+              <span class="t" id="p-title"></span>
+              <span class="where" id="p-where"></span>
             </div>
+            <div class="brayer" aria-hidden="true"></div>
           </div>
         </div>
       </div>

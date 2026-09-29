@@ -103,7 +103,6 @@
       return `<span class="ch" aria-hidden="true" style="transform:translateY(${y}px) rotate(${r}deg);--r2:${-r}deg">${ch}</span>`;
     }).join("")
   ).join("<br>");
-  $("seal-coin").innerHTML = coinSVG;
 
   // ---------- which city's machine is this ----------
   function paintMachine() {
