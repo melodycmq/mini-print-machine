@@ -15,7 +15,8 @@
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
     "@vercel/blob": "^2.8.0",
-    "openai": "^7.24.0"
+    "openai": "^7.24.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "vercel": "^61.0.0"

@@ -1,14 +1,24 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { redis, redisConfig, keys, slug, locate } from "../lib/store.js";
+import { findCity } from "../lib/cities.js";
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
 
 // GET /api/set[?city=Chicago]
-// Returns this area's six prints: { key, edition, city, prints: [{ id, title, where, image|null }] }.
+// Returns this area's six prints: { key, edition, city, prints: [{ id, title, where, inks, image, thumb, layers }] }
+// (image/thumb/layers are null until that print is first pulled).
 // The list is written once per area by Claude and cached forever; images fill in as people play.
 export default async function handler(req, res) {
   const place = locate(req);
+  // Hand-picked places must be on the supported list. Detected places are always allowed, but if they match
+  // a listed city they take its canonical spelling too, so "New York" (IP) and "New York City" (typed) share
+  // one cached set instead of generating two.
+  const hit = findCity(place.city, place.country);
+  if (place.source === "chosen" && !hit) {
+    return res.status(400).json({ error: "unsupported", detail: `We don't print for "${place.city}" yet.` });
+  }
+  if (hit) Object.assign(place, { city: hit.city, country: hit.country, region: place.region || hit.region || hit.countryName });
   const cityKey = [slug(place.city), slug(place.country || "x")].join("--");
 
   // Which step failed goes back to the browser (no secrets), so a broken setup is easy to spot.
@@ -27,7 +37,11 @@ export default async function handler(req, res) {
       edition: set.edition,
       city: place.city,
       source: place.source,
-      prints: set.prints.map((p, i) => ({ id: p.id, title: p.title, where: p.where, image: images[i] || null })),
+      prints: set.prints.map((p, i) => {
+        const img = images[i] || {};
+        return { id: p.id, title: p.title, where: p.where, inks: p.inks,
+                 image: img.image || null, thumb: img.thumb || null, layers: img.layers || null };
+      }),
     });
   } catch (err) {
     console.error("set failed", cityKey, step.name, err);
@@ -51,25 +65,33 @@ async function createSet(cityKey, place, step) {
   const where = [place.city, place.region, place.country].filter(Boolean).join(", ");
   const msg = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1500,
+    max_tokens: 2000,
     messages: [{
       role: "user",
       content:
 `You are curating a set of 6 tiny art prints sold from a vending machine in ${where}.
-Pick 6 things that are iconic, interesting or quietly beautiful about this specific place, the kind a local would smile at:
-a mix of landmarks, food, street life, nature and small everyday details. Avoid generic subjects that could be anywhere.
-If the place is small, draw from its surrounding area.
+The prints should feel like a local's inside joke or a love letter, not a tourism poster.
+
+Pick 6 subjects that are whimsical, cultural and specific to this place: food rituals, street characters and
+animals, everyday objects, customs, festivals, local slang made visible, small habits and quirks, niche
+cultural references a resident would smile at. At most ONE well-known landmark, and only if you show it in
+an unexpected, playful way. Avoid anything generic that could be from anywhere, and avoid the obvious
+postcard list. If the place is small, draw from its surrounding region.
 
 For each print give:
 - "id": short lowercase slug, unique within the set
-- "title": 1–4 word English name of the subject
-- "where": short English location label printed on the card (a street, neighborhood, park or venue; max 24 characters)
-- "subject_zh": one sentence in Chinese describing only the subject for an illustrator: what it is, its most recognizable
-  silhouette or pose, and at most one small hint of setting. Nothing with written words on it.
+- "title": 1–4 word English name for the print (can be playful)
+- "where": short English location label printed on the card (a street, neighborhood, venue; max 24 characters)
+- "subject_zh": one or two sentences in Chinese for an illustrator: the subject, what it is doing, its most
+  recognizable silhouette or gesture, and the small story or feeling of the moment. No written words, signs
+  with text, logos or numbers in the scene.
+- "inks": 3 or 4 spot ink colors as hex codes that suit this subject, listed lightest to darkest. The last
+  one is a deep "key" ink used for the thin structural lines. Bold, printable colors; no near-whites.
 
 Also give "edition": the place name as it should appear on the machine (e.g. "Chicago", "Lower Manhattan").
 
-Reply with JSON only, no prose: {"edition": "...", "prints": [{"id": "...", "title": "...", "where": "...", "subject_zh": "..."}]}`,
+Reply with JSON only, no prose:
+{"edition": "...", "prints": [{"id": "...", "title": "...", "where": "...", "subject_zh": "...", "inks": ["#...", "#...", "#..."]}]}`,
     }],
   });
 
@@ -85,7 +107,8 @@ Reply with JSON only, no prose: {"edition": "...", "prints": [{"id": "...", "tit
       id,
       title: String(p.title || "").slice(0, 40),
       where: String(p.where || place.city).slice(0, 28),
-      subject_zh: String(p.subject_zh || p.title || "").slice(0, 300),
+      subject_zh: String(p.subject_zh || p.title || "").slice(0, 400),
+      inks: cleanInks(p.inks),
     };
   });
   if (prints.length !== 6) throw new Error(`expected 6 prints, got ${prints.length}`);
@@ -95,4 +118,15 @@ Reply with JSON only, no prose: {"edition": "...", "prints": [{"id": "...", "tit
   step.name = "redis";
   const wrote = await redis.set(keys.set(cityKey), set, { nx: true });
   return wrote ? set : await redis.get(keys.set(cityKey));
+}
+
+// 3–4 valid hex inks, or a safe default set (warm, cool, accent, deep key line) if Claude's are unusable.
+const DEFAULT_INKS = ["#F2C14E", "#E4572E", "#4C8FB8", "#232A4D"];
+function cleanInks(inks) {
+  const ok = (Array.isArray(inks) ? inks : [])
+    .map((c) => String(c).trim())
+    .filter((c) => /^#[0-9a-f]{6}$/i.test(c))
+    .filter((c) => { const n = parseInt(c.slice(1), 16); return ((n >> 16) + ((n >> 8) & 255) + (n & 255)) / 3 < 235; }) // no near-whites
+    .slice(0, 4);
+  return ok.length >= 3 ? ok : DEFAULT_INKS;
 }

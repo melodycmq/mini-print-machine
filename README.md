@@ -46,9 +46,20 @@ Locally there are no geolocation headers, so the machine uses New York unless yo
 | `IMAGE_MODEL` | `gpt-image-2` | Image model (`gpt-image-1` or `gpt-image-1-mini` are older, cheaper options) |
 | `IMAGE_QUALITY` | `medium` | `low` / `medium` / `high` |
 | `DAILY_GENERATION_CAP` | `150` | Max new images per day across all visitors; after that everyone gets New York |
-| `GENERATIONS_PER_IP_PER_HOUR` | `12` | Per-visitor limit on new images (cached prints don't count) |
+| `GENERATIONS_PER_IP_PER_HOUR` | `30` | Per-visitor limit on new images (cached prints don't count) |
+
+## Scripts
+
+- **Pre-draw cities** (fills the sticker pool the travel animation flips through, and makes those cities land instantly):
+  `ADMIN_TOKEN=... node scripts/seed-cities.mjs https://your-site.vercel.app "Tokyo,JP" "Paris,FR"`
+  Needs `ADMIN_TOKEN` set in Vercel too. About six images per new city; the daily cap still applies.
+- **New background map:** `node scripts/make-map.mjs path/to/map.png` turns any map image into a seamless
+  left↔right tile at `public/map.webp` (mirrored so roads and rivers join) and prints its paper color for `--page`.
 
 ## Useful admin moves
+
+- **Restyle every print:** change the prompts in `api/set.js` / `lib/style-prompt.js`, then bump `STYLE_VERSION` in
+  `lib/store.js`. Every city is re-picked and redrawn once in the new style; old data is simply ignored.
 
 - **Regenerate one print:** delete its `img:<city-key>:<id>` key in the Upstash console; the next pull redraws it.
 - **Re-pick a whole city:** delete `set:<city-key>` and its `img:<city-key>:*` keys.

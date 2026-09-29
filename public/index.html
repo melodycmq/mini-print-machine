@@ -9,8 +9,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Londrina+Solid:wght@300;400;900&display=swap">
 <style>
+@property --red { syntax: "<color>"; inherits: true; initial-value: #E0312B; }
+@property --red-deep { syntax: "<color>"; inherits: true; initial-value: #A91F1A; }
 /* Layout: one hand-drawn vending machine, centered like it's bolted to a bodega wall; your stash of prints collects underneath. */
 :root {
+  --page: #E4EAF1;       /* pale blue-grey paper behind everything, matched to the map's own paper */
+  --on-page: #2A2D5E;    /* text that sits directly on the page */
   --paper: #FFF6D8;
   --panel: #FFFEF8;
   --red: #E0312B;
@@ -23,18 +27,23 @@
   --metal-deep: #8F95B8;
   --metal-line: #6C7399;
   --shade: repeating-linear-gradient(-48deg, rgb(42 45 94 / .24) 0 1.3px, transparent 1.3px 4.2px);
+  --shade-out: repeating-linear-gradient(-48deg, rgb(42 45 94 / .3) 0 1.3px, transparent 1.3px 4.2px); /* drawn shadows cast onto the page */
   --speck: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 3.6 0 0 0 -2.15'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .38 0 0 0 0 .33 0 0 0 .32 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .09' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .45 0 0 0 0 .4 0 0 0 .16 -.06'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
   --hatch: repeating-linear-gradient(38deg, rgb(255 255 255 / .13) 0 1.5px, transparent 1.5px 6px);
   --label: #2F4EA0;
-  --veil: rgb(255 246 216 / .94);
+  --scribble: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 8' preserveAspectRatio='none'%3E%3Cfilter id='g' x='0' y='-50%25' width='100%25' height='200%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='1' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -3 0 0 0 2.3'/%3E%3CfeComposite in='SourceGraphic' operator='in'/%3E%3C/filter%3E%3Cg filter='url(%23g)' fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cpath d='M2 4.6 C30 3.2 52 5.8 80 4.4 S140 3.4 170 4.9 S192 4.1 198 3.7' stroke-width='2.6'/%3E%3Cpath d='M8 5.4 C40 4.5 70 6.1 110 5 S170 4.6 194 5.2' stroke-width='1.1' opacity='.7'/%3E%3C/g%3E%3C/svg%3E");
+  --veil: rgb(228 234 241 / .93);
   --display: "Amatic SC", "Chalkboard SE", "Marker Felt", cursive;
   --block: "Londrina Solid", "Arial Rounded MT Bold", sans-serif;
   --hand: "Londrina Solid", "Chalkboard SE", sans-serif;
   color-scheme: light;
+  transition: --red .9s ease, --red-deep .9s ease; /* new city → new theme color, faded in */
 }
+/* While traveling the theme color flicks through the palette, so each change is quick. */
+:root.theme-cycling { transition: --red .12s linear, --red-deep .12s linear; }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--paper); color: var(--ink); }
+html, body { margin: 0; background: var(--page); color: var(--ink); }
 body { font-family: var(--hand); font-weight: 300; letter-spacing: .02em; -webkit-font-smoothing: antialiased; }
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 button, input { font: inherit; color: inherit; }
@@ -42,24 +51,37 @@ button { background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-h
 button:focus-visible, input:focus-visible { outline: 3px dashed var(--label); outline-offset: 4px; border-radius: 6px; }
 [hidden] { display: none !important; }
 
-main { padding-block: 40px 56px; padding-inline: 16px; display: grid; justify-items: center; gap: 48px; position: relative; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+main { padding-block: 0 56px; padding-inline: 16px; display: grid; justify-items: center; gap: 32px; position: relative; z-index: 1; }
+/* Hand-drawn city map behind everything (drawn by map.js). It slides left→right while traveling to a new city. */
+.map { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .8s; }
+.map.ready { opacity: .7; } /* lightened a touch so the machine and stash stay clear */
+.map-track { position: absolute; top: 0; bottom: 0; left: -1400px; right: 0; background-repeat: repeat; will-change: transform; }
+/* The machine is drawn at one design size (520px wide) and scaled as a whole by app.js (CSS zoom)
+   so the full rectangle always fits the viewport with 40px above and below. */
+.stage { width: 100%; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding-block: 40px; }
 
 .sound {
   position: absolute; top: 12px; right: 16px;
-  font-family: var(--hand); font-size: .95rem; color: var(--pencil);
+  font-family: var(--hand); font-size: .95rem; color: var(--on-page);
   display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px;
 }
 .sound svg { width: 20px; height: 20px; }
 
 /* ---------- the machine ---------- */
-.machine-wrap { position: relative; width: min(100%, 520px); }
+.machine-wrap { position: relative; width: 520px; flex: none; }
+/* Wide layout for short windows: a broader machine with all six stickers in one row. app.js picks whichever
+   layout shows the machine bigger. Either way the machine stays a portrait rectangle (taller than wide). */
+.machine-wrap.wide { width: 600px; }
+.machine-wrap.wide .lineup { width: 100%; grid-template-columns: repeat(6, 1fr); gap: 6px 8px; }
 .machine-wrap::before {
   content: ""; position: absolute; inset: 0; transform: translate(12px, 14px);
   border-radius: 18px 26px 20px 24px / 24px 18px 26px 20px;
-  background: var(--shade); filter: url(#rough);
+  background: var(--shade-out); filter: url(#rough);
 }
 .machine {
   position: relative; z-index: 1; width: 100%;
+  display: flex; flex-direction: column;
   padding: 20px; background: var(--paper);
   border-radius: 18px 26px 20px 24px / 24px 18px 26px 20px;
 }
@@ -83,44 +105,79 @@ main { padding-block: 40px 56px; padding-inline: 16px; display: grid; justify-it
 .panel {
   position: relative; background: var(--panel);
   padding: 30px 18px 22px; text-align: center;
-  display: grid; justify-items: center; gap: 16px;
+  flex: 1; display: grid; justify-items: center; align-content: space-evenly; gap: 16px;
   background-image: radial-gradient(rgb(34 31 28 / .035) 1px, transparent 1.2px);
   background-size: 7px 7px;
 }
 h1 {
   margin: 0; font-family: var(--block); font-weight: 900; line-height: 1;
-  font-size: clamp(1.8rem, 7.4vw, 2.55rem); letter-spacing: .05em; text-transform: uppercase;
+  font-size: 2.55rem; letter-spacing: .05em; text-transform: uppercase;
   text-wrap: balance;
 }
 h1 .ch { display: inline-block; transition: transform .25s cubic-bezier(.3,1.8,.5,1); }
 h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
-.edition { margin: -6px 0 0; transform: rotate(-2deg); }
-.edition-btn { font-family: var(--display); font-weight: 700; color: var(--red); font-size: 1.7rem; letter-spacing: .14em; text-transform: uppercase; }
-.edition-btn .change { font-size: .8rem; letter-spacing: .1em; color: var(--pencil); margin-left: .5em; opacity: 0; transition: opacity .2s; font-family: var(--hand); text-transform: none; }
-.edition-btn:hover .change, .edition-btn:focus-visible .change { opacity: 1; }
-.edition.loading .edition-btn { animation: blink 1.2s ease-in-out infinite; }
+.edition {
+  position: relative; z-index: 6; margin: -6px 0 0; transform: rotate(-2deg);
+  font-family: var(--display); font-weight: 700; color: var(--red); font-size: 1.7rem; letter-spacing: .14em; text-transform: uppercase; line-height: 1.25;
+  white-space: nowrap;
+}
+/* The city name is the control: underline on hover, click to type over it in the same lettering. */
+.city-field { position: relative; display: inline-block; }
+.city-name { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: text; }
+.city-name:focus-visible { outline: none; }
+/* A wobbly, grainy crayon stroke (an SVG mask filled with the theme color), not a straight rule. */
+.city-field::after {
+  content: ""; position: absolute; left: -2px; right: -2px; bottom: -3px; height: 8px; pointer-events: none;
+  background: currentColor; opacity: 0; transition: opacity .15s;
+  -webkit-mask: var(--scribble) center / 100% 100% no-repeat; mask: var(--scribble) center / 100% 100% no-repeat;
+}
+.city-field:hover::after, .city-field:has(:focus-visible)::after, .city-field:has(.city-input:not([hidden]))::after { opacity: 1; }
+.edition.loading .city-name { animation: blink 1.2s ease-in-out infinite; }
 @keyframes blink { 50% { opacity: .45; } }
-.city-form { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: -4px; }
-.city-form input { width: min(220px, 60vw); padding: 6px 10px; background: var(--panel); border: 2px solid var(--ink); border-radius: 10px 7px 11px 8px; font-size: 1rem; }
-.city-form button { font-family: var(--display); font-weight: 700; font-size: 1.2rem; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-bottom: 2px solid var(--red); }
+.city-input {
+  font: inherit; letter-spacing: inherit; text-transform: uppercase; color: var(--red); text-align: left;
+  background: transparent; border: 0; border-radius: 0; padding: 0; margin: 0;
+  caret-color: var(--red); outline: none; min-width: 3ch;
+}
+.city-input::placeholder { color: color-mix(in srgb, var(--red) 32%, transparent); }
+.city-input:focus-visible { outline: none; }
+/* Lives on <body> (moved there by app.js) so it isn't scaled or hidden by the machine; placed under the input. */
+.city-list {
+  position: fixed; z-index: 60; transform: rotate(-2deg); transform-origin: 0 0; /* same tilt as the edition line */
+  width: max-content; min-width: 250px; max-width: 340px; max-height: 280px; overflow-y: auto;
+  margin: 0; padding: 6px; list-style: none; text-align: left;
+  background: var(--panel); border: 2px solid var(--ink); border-radius: 11px 8px 12px 9px;
+  box-shadow: 5px 6px 0 rgb(42 45 94 / .12);
+}
+.city-list li {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 4px 10px; border-radius: 7px; cursor: pointer;
+  font-family: var(--display); font-weight: 700; font-size: 1.35rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink);
+}
+.city-list li small { font-family: var(--hand); font-weight: 300; font-size: .68rem; letter-spacing: .16em; color: var(--pencil); white-space: nowrap; }
+.city-list li mark { background: none; color: var(--red); }
+.city-list li[aria-selected="true"] { background: color-mix(in srgb, var(--red) 10%, transparent); }
+.city-list li.here { color: var(--red); }
+.city-list li.none { cursor: default; font-family: var(--hand); font-weight: 300; font-size: .95rem; letter-spacing: .02em; text-transform: none; color: var(--pencil); }
 
-.lineup { list-style: none; margin: 4px 0 0; padding: 0; width: 100%; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.lineup { list-style: none; margin: 2px 0 0; padding: 0; width: 290px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 16px; }
 .lineup li { position: relative; aspect-ratio: 1; animation: bob 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * -.53s); }
 .lineup .art { filter: url(#rough-boil); transition: transform .3s cubic-bezier(.3,1.8,.5,1); }
-.lineup .art.photo { overflow: hidden; }
-.lineup .art.photo img { transform: scale(2.3); }
 .lineup li:hover .art { transform: rotate(-8deg) scale(1.15); }
-.lineup li .tip {
-  position: absolute; left: 50%; bottom: -1.2rem; transform: translateX(-50%);
-  font-family: var(--hand); font-size: .85rem; white-space: nowrap; color: var(--pencil);
-  opacity: 0; transition: opacity .2s; pointer-events: none;
-}
-.lineup li:hover .tip { opacity: 1; }
+.machine-wrap.traveling { animation: hum .42s linear infinite; }
+@keyframes hum { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-.6px,.4px); } 50% { transform: translate(.5px,-.5px); } 75% { transform: translate(-.3px,-.3px); } }
+/* While traveling, app.js flips each sticker over and over, swapping to a new picture each time it's edge-on. */
+.machine-wrap.traveling .lineup { perspective: 500px; }
+.machine-wrap.traveling .lineup li { animation: none; }
+.machine-wrap.traveling .edition { animation: flap .11s steps(2) infinite; }
+@keyframes flap { 50% { transform: rotate(-2deg) translateY(-1px); } }
+.lineup.landed li { animation: land .55s cubic-bezier(.3,1.6,.5,1) backwards, bob 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * 70ms), calc(var(--i) * -.53s); }
+@keyframes land { from { transform: translateY(-18px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes bob { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(1.5deg); } }
 
-.rule { margin: 10px 0 0; font-family: var(--display); font-weight: 700; font-size: clamp(1.55rem, 6vw, 1.9rem); letter-spacing: .08em; text-transform: uppercase; }
-.makers { margin: 4px 0 0; display: flex; align-items: center; gap: 14px; font-size: 1rem; color: var(--pencil); }
+.rule { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.75rem; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
+.footrow { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 4px; }
 .stamp {
+  flex: none;
   font-family: var(--block); font-weight: 400; font-size: .78rem; line-height: 1.05; letter-spacing: .1em; text-transform: uppercase;
   border: 2px solid var(--ink); padding: 5px 8px; border-radius: 8px 5px 9px 6px; transform: rotate(-3deg); color: var(--ink);
   filter: url(#rough);
@@ -132,7 +189,7 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
   background: var(--shade) top / 100% 8px no-repeat, var(--tray);
   display: grid; gap: 12px;
 }
-.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(8px, 3vw, 18px); align-items: start; min-height: 150px; }
+.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: start; min-height: 150px; }
 .slot { display: grid; position: relative; width: 100%; perspective: 500px; }
 .slot[aria-disabled="true"] { cursor: default; }
 .cover {
@@ -177,14 +234,12 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
   filter: url(#rough);
 }
 .price {
-  font-family: var(--block); font-weight: 400; font-size: clamp(.8rem, 3vw, .95rem);
+  font-family: var(--block); font-weight: 400; font-size: .95rem;
   background: var(--panel); color: var(--ink);
   border: 2.5px solid var(--label); border-radius: 999px 880px 999px 900px; padding: 1px 9px;
 }
 .slot.ready .price { animation: nudge 1s ease-in-out infinite; background: var(--red); color: var(--panel); border-color: var(--red-deep); }
 @keyframes nudge { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-.count { position: absolute; z-index: 3; top: 8px; right: -6px; font-family: var(--block); font-weight: 900; font-size: 1rem; color: var(--red); transform: rotate(8deg); opacity: 0; transition: opacity .2s; }
-.slot.open .count { opacity: 1; }
 
 .status { margin: 0; min-height: 1.6em; text-align: center; font-family: var(--hand); font-size: 1.12rem; color: var(--pencil); }
 .status b { color: var(--red); font-weight: 400; }
@@ -197,37 +252,65 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .art svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .art .lines .l { fill: none; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
 .art text { font-family: var(--display); font-weight: 700; }
-.art.photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; }
+.art.photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+/* A generated print on the card: one transparent layer per ink, each pulled across by its own brayer pass,
+   nudged a pixel or two off register like a real multi-color print. */
+.art.layers img { clip-path: inset(0 100% 0 0); transform: translate(var(--dx, 0px), var(--dy, 0px)); }
+.inside.rolled .art.layers img, .inside.pulled .art.layers img { clip-path: inset(0 0 0 0); }
 .art.pending { display: grid; place-items: center; }
 .art.pending span { font-family: var(--display); font-weight: 700; font-size: 1.4rem; letter-spacing: .12em; color: rgb(98 93 122 / .6); animation: blink 1.4s ease-in-out infinite; }
 
 /* ---------- stash ---------- */
 .stash { width: min(100%, 640px); display: grid; gap: 16px; }
 .stash header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.stash h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 2.2rem; letter-spacing: .08em; text-transform: uppercase; line-height: 1; }
-.stash .tally { font-family: var(--hand); font-size: 1.05rem; color: var(--pencil); }
+.stash h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 2.2rem; letter-spacing: .08em; text-transform: uppercase; line-height: 1; color: var(--on-page); }
+.stash .tally { font-family: var(--hand); font-size: 1.05rem; color: color-mix(in srgb, var(--on-page) 75%, transparent); }
 .stash .tally b { color: var(--red); }
-.tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
-@media (max-width: 440px) { .tiles { grid-template-columns: repeat(3, 1fr); } }
-.tile { display: grid; gap: 6px; justify-items: center; text-align: center; }
-.tile .mini {
-  position: relative; width: 100%; aspect-ratio: 5 / 7; padding: 8%;
-  display: grid; align-content: center;
-  transform: rotate(var(--tilt)); transition: transform .3s cubic-bezier(.3,1.8,.5,1);
+/* One envelope per place. Click to flip the flap open and slide the prints up out of it; click again to tuck them back. */
+.envelopes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 40px 56px; align-items: end; }
+.env-item { padding-top: 0; transition: padding-top .45s cubic-bezier(.3,1.3,.5,1); }
+.env-item.open { padding-top: 186px; }
+.env { position: relative; aspect-ratio: 1.55; perspective: 700px; }
+.env::after { content: ""; position: absolute; inset: 0; z-index: 0; transform: translate(5px, 6px); background: var(--shade-out); filter: url(#rough); }
+.env-body {
+  position: absolute; inset: 0; z-index: 3; width: 100%; text-align: left;
+  background:
+    linear-gradient(to top right, transparent calc(50% - .8px), rgb(42 45 94 / .22) calc(50% - .8px) calc(50% + .8px), transparent calc(50% + .8px)) left bottom / 50% 64% no-repeat,
+    linear-gradient(to top left, transparent calc(50% - .8px), rgb(42 45 94 / .22) calc(50% - .8px) calc(50% + .8px), transparent calc(50% + .8px)) right bottom / 50% 64% no-repeat,
+    var(--paper-grain), #F7F2E6;
 }
-.tile .mini::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--paper-grain), #FBF8F1; }
-.tile .mini::after { content: ""; position: absolute; inset: 0; z-index: -2; transform: translate(5px, 6px); background: var(--shade); filter: url(#rough); }
-.tile .mini .art { aspect-ratio: 1; height: auto; }
-.tile .mini .art.photo { position: absolute; inset: 0; aspect-ratio: auto; height: 100%; }
-.tile:hover .mini { transform: rotate(0) translateY(-4px); }
-.tile.empty { cursor: default; }
-.tile.empty .mini { display: grid; place-items: center; }
-.tile.empty .mini::after { display: none; }
-.tile.empty .mini::before { content: ""; position: absolute; inset: 0; z-index: 0; background: transparent; border: 2px dashed rgb(98 93 122 / .45); border-radius: 4px; filter: url(#rough); }
-.tile.empty .mini span { font-family: var(--display); font-weight: 700; font-size: 2.4rem; color: rgb(98 93 122 / .5); }
-.stash.complete h2::after { content: "  ✶ full set!"; color: var(--red); }
+.env-body::before { content: ""; position: absolute; inset: 0; border: 2px solid var(--ink); border-radius: 4px 6px 5px 4px; filter: url(#rough); pointer-events: none; }
+.env-name { position: absolute; left: 12px; bottom: 26px; font-family: var(--display); font-weight: 700; font-size: 1.4rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); line-height: 1; max-width: 70%; }
+.env-count { position: absolute; left: 13px; bottom: 11px; font-family: var(--hand); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--pencil); }
+.env-stamp {
+  position: absolute; right: 12px; bottom: 11px; width: 26px; height: 31px; display: grid; place-items: center;
+  background: var(--stamp); color: #FFFEF8; font-size: .95rem; line-height: 1;
+  outline: 2.5px dotted var(--stamp); outline-offset: 1.5px; box-shadow: inset 0 0 0 2px #FFFEF8; transform: rotate(4deg);
+}
+.env-flap {
+  position: absolute; left: 0; right: 0; top: 0; height: 64%; z-index: 4; pointer-events: none;
+  transform-origin: 50% 0; transition: transform .45s cubic-bezier(.4,0,.2,1), z-index 0s .2s;
+  filter: drop-shadow(0 1.5px 0 rgb(42 45 94 / .45));
+}
+.env-flap::before { content: ""; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); background: var(--paper-grain), #EFE6D2; }
+.env-item.open .env-flap { transform: rotateX(180deg); z-index: 1; }
+.env-cards { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.env-card {
+  position: absolute; left: 50%; top: 10%; width: 40%; aspect-ratio: 5 / 7; margin-left: -20%;
+  transform: translateY(15%) scale(.92); transition: transform .5s cubic-bezier(.3,1.25,.5,1);
+  transition-delay: calc((var(--k) + 3) * 30ms); pointer-events: none;
+}
+.env-item.open .env-card { transform: translateX(calc(var(--k) * 56%)) translateY(-118%) rotate(calc(var(--k) * 4deg)); pointer-events: auto; cursor: zoom-in; }
+.env-card .mini {
+  position: relative; display: grid; place-items: center; width: 100%; height: 100%; padding: 10%;
+  background: var(--paper-grain), #FBF8F1; box-shadow: 0 0 0 1px rgb(42 45 94 / .14), 2px 3px 0 rgb(42 45 94 / .14);
+  transition: transform .2s cubic-bezier(.3,1.8,.5,1);
+}
+.env-card .mini .art { aspect-ratio: 1; height: auto; }
+.env-card .mini .art.photo { position: absolute; inset: 6%; aspect-ratio: auto; height: auto; }
+.env-item.open .env-card:hover .mini, .env-card:focus-visible .mini { transform: translateY(-8px) rotate(-1deg); }
 
-footer { font-family: var(--hand); font-size: 1rem; color: var(--pencil); text-align: center; max-width: 38ch; line-height: 1.35; }
+footer { font-family: var(--hand); font-size: .88rem; color: color-mix(in srgb, var(--on-page) 75%, transparent); text-align: center; line-height: 1.35; text-wrap: balance; } /* one line where it fits; wraps evenly on phones */
 footer a { color: var(--red); }
 
 /* ---------- print overlay ---------- */
@@ -253,7 +336,7 @@ footer a { color: var(--red); }
 .mouth { width: var(--cw); height: calc(var(--cw) * 1.4); perspective: 1400px; margin-top: -4px; }
 .mouth.clip { overflow: hidden; }
 .card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transform: translateY(-101%); }
-.card-shade { position: absolute; inset: 0; transform: translate3d(10px, 12px, -1px); background: var(--shade); filter: url(#rough); }
+.card-shade { position: absolute; inset: 0; transform: translate3d(10px, 12px, -1px); background: var(--shade-out); filter: url(#rough); }
 .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .inside {
   background: var(--paper-grain), #FBF8F1; padding: 8% 8% 9%; display: grid; grid-template-rows: 1fr auto; gap: 2%;
@@ -272,15 +355,17 @@ footer a { color: var(--red); }
 @keyframes fade { to { opacity: 1; } }
 .brayer {
   position: absolute; top: -4%; bottom: -4%; left: -16%; width: 13%;
-  background: var(--speck), var(--hatch), var(--red);
+  background: var(--speck), var(--hatch), var(--ink, var(--red));
   border-radius: 9px 7px 10px 8px; opacity: 0; pointer-events: none;
-  box-shadow: 0 0 0 2.5px var(--red-deep);
+  box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--ink, var(--red)) 70%, #000);
 }
 .inside.rolled .brayer { animation: roll .95s cubic-bezier(.55,.1,.45,.9) forwards; }
 @keyframes roll { 0% { left: -16%; opacity: 1; } 90% { opacity: 1; } 100% { left: 104%; opacity: 0; } }
-.pencil { display: grid; justify-items: center; align-content: center; color: var(--pencil); }
-.pencil .where { font-family: var(--display); font-weight: 700; font-size: clamp(.95rem, 3.8vw, 1.2rem); letter-spacing: .2em; }
+.pencil { display: grid; justify-items: center; align-content: center; gap: 3px; text-align: center; color: var(--pencil); }
+.pencil .t { font-family: var(--display); font-weight: 700; font-size: clamp(.9rem, 3.4vw, 1.15rem); letter-spacing: .1em; line-height: 1; color: var(--ink); }
+.pencil .where { font-family: var(--hand); font-weight: 300; font-size: clamp(.5rem, 1.9vw, .64rem); letter-spacing: .24em; text-transform: uppercase; line-height: 1.2; }
 .pencil > * { clip-path: inset(0 100% 0 0); transition: clip-path .8s linear; }
+.pencil .where { transition-delay: .4s; }
 .inside.signed .pencil > * { clip-path: inset(0 0 0 0); }
 
 .cover-leaf { position: absolute; inset: 0; transform-origin: 0 50%; transform-style: preserve-3d; transition: transform .95s cubic-bezier(.5,0,.2,1); }
@@ -301,8 +386,9 @@ footer a { color: var(--red); }
   position: relative; font-family: var(--display); font-size: 1.45rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; line-height: 1; padding: 9px 20px;
   transition: transform .2s cubic-bezier(.3,1.8,.5,1); isolation: isolate;
 }
-.btn::before { content: ""; position: absolute; inset: 0; border: 3px solid var(--ink); border-radius: 12px 9px 13px 8px; filter: url(#rough); z-index: -1; background: transparent; }
-.btn::after { content: ""; position: absolute; inset: 0; z-index: -2; transform: translate(4px, 5px); border-radius: 12px 9px 13px 8px; background: var(--shade); filter: url(#rough); }
+.btn::before { content: ""; position: absolute; inset: 0; border: 3px solid var(--on-page); border-radius: 12px 9px 13px 8px; filter: url(#rough); z-index: -1; background: transparent; }
+.btn::after { content: ""; position: absolute; inset: 0; z-index: -2; transform: translate(4px, 5px); border-radius: 12px 9px 13px 8px; background: var(--shade-out); filter: url(#rough); }
+.btn { color: var(--on-page); }
 .btn.primary { color: var(--panel); }
 .btn.primary::before { background: var(--speck), var(--hatch), var(--red); border-color: var(--red-deep); }
 .btn:hover { transform: rotate(-1.5deg) scale(1.03); }
@@ -371,20 +457,16 @@ footer a { color: var(--red); }
 <main>
   <button class="sound" id="sound" type="button" aria-pressed="true"></button>
 
+  <div class="stage">
   <div class="machine-wrap" id="machine"><div class="machine">
     <span class="bolt l"></span><span class="bolt r"></span>
     <div class="panel">
       <h1 id="title" aria-label="Mini Print Vending Machine">Mini Print<br>Vending Machine</h1>
-      <p class="edition" id="edition"><button class="edition-btn" id="edition-btn" type="button" aria-label="Change city"><span id="edition-name">New York City</span> edition<span class="change">change</span></button></p>
-      <form class="city-form" id="city-form" hidden>
-        <input id="city-input" type="text" autocomplete="address-level2" placeholder="Type a city" aria-label="City">
-        <button type="submit">Print here</button>
-        <button type="button" id="city-auto">Use my location</button>
-      </form>
+      <p class="edition" id="edition"><span class="city-field"><button class="city-name" id="city-name" type="button">New York City</button><input class="city-input" id="city-input" type="text" hidden role="combobox" aria-label="Type a city" aria-autocomplete="list" aria-expanded="false" aria-controls="city-list" autocomplete="off" autocapitalize="words" spellcheck="false"></span> edition</p>
       <ul class="lineup" id="lineup" aria-label="Prints in this machine"></ul>
-      <p class="rule">4 Quarters = 1 Surprise Print</p>
-      <div class="makers">
-        <span class="stamp" id="stamp">Hand-pulled<br>in New York City</span>
+      <div class="footrow">
+        <span class="stamp">Hand-pulled<br>in your city</span>
+        <p class="rule">4 Quarters = 1 Surprise Print</p>
       </div>
     </div>
     <div class="tray">
@@ -392,16 +474,17 @@ footer a { color: var(--red); }
       <p class="status" id="status" aria-live="polite">Pick a slot to start.</p>
     </div>
   </div></div>
+  </div>
 
   <section class="stash" id="stash" aria-labelledby="stash-h">
     <header>
       <h2 id="stash-h">Your Stash</h2>
       <span class="tally" id="tally"></span>
     </header>
-    <div class="tiles" id="tiles"></div>
+    <div class="envelopes" id="envelopes"></div>
   </section>
 
-  <footer>A love letter to the mini print vending machines by <a href="https://inciardiprints.com/pages/about" target="_blank" rel="noopener">Ana Inciardi</a>. Go feed a real one some quarters.</footer>
+  <footer>A <span aria-label="love">♡</span> letter to the mini print vending machines by <a href="https://inciardiprints.com/pages/about" target="_blank" rel="noopener">Ana Inciardi</a>. Go feed a real one some quarters.</footer>
 </main>
 
 <div class="overlay" id="overlay" hidden tabindex="-1" role="dialog" aria-modal="true" aria-label="Your print">
@@ -413,6 +496,7 @@ footer a { color: var(--red); }
         <div class="face inside" id="inside">
           <div id="art-slot"></div>
           <div class="pencil">
+            <span class="t" id="p-title"></span>
             <span class="where" id="p-where"></span>
           </div>
           <div class="brayer" aria-hidden="true"></div>
@@ -437,6 +521,9 @@ footer a { color: var(--red); }
   </div>
 </div>
 
+<ul class="city-list" id="city-list" role="listbox" hidden></ul>
+
+<script src="/map.js"></script>
 <script src="/nyc-prints.js"></script>
 <script src="/app.js"></script>
 </body>

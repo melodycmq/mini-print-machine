@@ -3,6 +3,6 @@
   "outputDirectory": "public",
   "functions": {
     "api/print.js": { "maxDuration": 180 },
-    "api/set.js": { "maxDuration": 60 }
+    "api/set.js": { "maxDuration": 60, "includeFiles": "public/cities.json" }
   }
 }
