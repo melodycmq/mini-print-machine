@@ -6,7 +6,7 @@ import { separate } from "../lib/separate.js";
 
 const openai = new OpenAI(); // reads OPENAI_API_KEY
 const IMAGE_MODEL = process.env.IMAGE_MODEL || "gpt-image-2";
-const IMAGE_QUALITY = process.env.IMAGE_QUALITY || "medium";
+const IMAGE_QUALITY = process.env.IMAGE_QUALITY || "low"; // low: faster to draw; the simple one-object style holds up well
 
 // POST /api/print  { key, id }
 // → 200 { status: "ready", image, thumb, layers: [{ url, ink }] }   the print exists (made now or earlier)
@@ -41,6 +41,7 @@ export default async function handler(req, res) {
     if (!(await takeFromDailyBudget())) return res.status(503).json({ status: "limited", reason: "budget" });
     charged = true;
 
+    const t0 = Date.now();
     const result = await openai.images.generate({
       model: IMAGE_MODEL,
       prompt: printPrompt(print.subject_zh, print.inks),
@@ -51,9 +52,11 @@ export default async function handler(req, res) {
       n: 1,
     });
     const png = Buffer.from(result.data[0].b64_json, "base64");
+    const t1 = Date.now();
 
     // Split into one layer per ink so the page can pull the print color by color.
     const sep = await separate(png, print.inks);
+    const t2 = Date.now();
     const base = `prints/${key}/${id}`;
     const upload = (name, body) =>
       put(`${base}/${name}.png`, body, { access: "public", contentType: "image/png", addRandomSuffix: false, allowOverwrite: true })
@@ -65,6 +68,7 @@ export default async function handler(req, res) {
       put(`${base}/original.png`, png, { access: "public", contentType: "image/png", addRandomSuffix: false, allowOverwrite: true }),
     ]);
     const record = { image, thumb, layers: sep.layers.map((l, k) => ({ url: layerUrls[k], ink: l.ink })) };
+    console.log(`timing print ${key}/${id}: draw ${t1 - t0}ms (${IMAGE_MODEL}, ${IMAGE_QUALITY}), split ${t2 - t1}ms, upload ${Date.now() - t2}ms`);
     await redis.set(keys.image(key, id), record);
     await redis.sadd(keys.reel(), thumb); // add this sticker to the pool the travel animation flips through
     return res.status(200).json({ status: "ready", ...record });

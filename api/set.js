@@ -5,6 +5,7 @@ import { findCity } from "../lib/cities.js";
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
+const CLAUDE_EFFORT = process.env.CLAUDE_EFFORT || "low";
 
 // GET /api/set[?city=Chicago]
 // Returns this area's six prints: { key, edition, city, prints: [{ id, title, where, inks, image, thumb, layers }] }
@@ -69,12 +70,15 @@ async function createSet(cityKey, place, step) {
   let json = null;
   for (let attempt = 0; attempt < 2 && !json; attempt++) {
     step.name = "claude";
+    const started = Date.now();
     const msg = await anthropic.messages.parse({
       model: MODEL,
       max_tokens: 16000,
       messages: [{ role: "user", content: subjectPrompt(where) }],
-      output_config: { format: jsonSchemaOutputFormat(PRINT_SET_SCHEMA) },
+      // A short, simple list: low effort keeps it quick (thinking depth is the main cost of latency here).
+      output_config: { format: jsonSchemaOutputFormat(PRINT_SET_SCHEMA), effort: CLAUDE_EFFORT },
     });
+    console.log(`timing set ${cityKey}: claude ${Date.now() - started}ms (effort ${CLAUDE_EFFORT}, attempt ${attempt + 1})`);
     step.name = "parse-claude-reply";
     const out = msg.stop_reason === "refusal" ? null : msg.parsed_output;
     if (out && Array.isArray(out.prints) && out.prints.length >= 6) json = out;

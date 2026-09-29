@@ -43,8 +43,9 @@ Locally there are no geolocation headers, so the machine uses New York unless yo
 | Variable | Default | What it does |
 |---|---|---|
 | `CLAUDE_MODEL` | `claude-sonnet-5-5` | Model that picks each city's six subjects |
+| `CLAUDE_EFFORT` | `low` | How hard Claude thinks when picking subjects (`low` is fastest) |
 | `IMAGE_MODEL` | `gpt-image-2` | Image model (`gpt-image-1` or `gpt-image-1-mini` are older, cheaper options) |
-| `IMAGE_QUALITY` | `medium` | `low` / `medium` / `high` |
+| `IMAGE_QUALITY` | `low` | `low` / `medium` / `high` (slower and pricier as it goes up) |
 | `DAILY_GENERATION_CAP` | `150` | Max new images per day across all visitors; after that everyone gets New York |
 | `GENERATIONS_PER_IP_PER_HOUR` | `30` | Per-visitor limit on new images (cached prints don't count) |
 
