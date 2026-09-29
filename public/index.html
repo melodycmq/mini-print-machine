@@ -264,13 +264,14 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .stash { width: min(100%, 640px); display: grid; gap: 0; margin-bottom: 48px; }
 .stash header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .stash h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 2.2rem; letter-spacing: .08em; text-transform: uppercase; line-height: 1; color: var(--on-page); }
-.stash .tally { font-family: var(--hand); font-size: 1.05rem; color: color-mix(in srgb, var(--on-page) 75%, transparent); }
-.stash .tally b { color: var(--red); }
+.stash .tally { font-family: var(--hand); font-size: 1.05rem; color: var(--ink); }
+.stash .tally b { color: inherit; font-weight: 400; }
 /* One envelope per place. Click to flip the flap open and slide the prints up out of it; click again to tuck them back. */
 .envelopes { display: grid; grid-template-columns: repeat(auto-fill, 190px); justify-content: center; gap: 48px 200px; align-items: end; }
 /* The envelope stays 190px wide; the prints that come out are sized on their own (92px) so they read clearly. */
 /* Room for the fanned prints is always reserved, so opening or closing an envelope never moves the page. */
-.env-item { padding-top: 128px; }
+.env-item { padding-top: 44px; transition: padding-top .45s cubic-bezier(.3,1.2,.5,1); }
+.env-item.open { padding-top: 128px; }
 .env { position: relative; aspect-ratio: 1.55; perspective: 700px; }
 .env::after { content: ""; position: absolute; inset: 0; z-index: 0; transform: translate(5px, 6px); background: var(--shade-out); filter: url(#rough); }
 .env-body {
@@ -280,7 +281,9 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
     linear-gradient(to top left, transparent calc(50% - .8px), rgb(42 45 94 / .22) calc(50% - .8px) calc(50% + .8px), transparent calc(50% + .8px)) right bottom / 50% 64% no-repeat,
     var(--paper-grain), #F7F2E6;
 }
-.env-body::before { content: ""; position: absolute; inset: 0; border: 2px solid var(--ink); border-radius: 4px 6px 5px 4px; filter: url(#rough); pointer-events: none; }
+/* Outline, name, count and stamp sit above the fill, the flap and the tucked-in prints. */
+.env-face { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.env-face::before { content: ""; position: absolute; inset: 0; border: 2px solid var(--ink); border-radius: 4px 6px 5px 4px; filter: url(#rough); }
 .env-name { position: absolute; left: 12px; bottom: 26px; font-family: var(--display); font-weight: 700; font-size: 1.4rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); line-height: 1; max-width: 70%; }
 .env-count { position: absolute; left: 13px; bottom: 11px; font-family: var(--hand); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--pencil); }
 .env-stamp {
@@ -303,12 +306,19 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 }
 .env-item.open .env-card { transform: translateX(calc(var(--k) * 64px)) translateY(-94%) rotate(calc(var(--k) * 3deg)); pointer-events: auto; cursor: zoom-in; }
 .env-card .mini {
-  position: relative; display: grid; place-items: center; width: 100%; height: 100%; padding: 10%;
+  position: relative; display: grid; grid-template-rows: 1fr auto; gap: 2%; width: 100%; height: 100%; padding: 8% 8% 9%;
+  container-type: inline-size; overflow: hidden;
   background: var(--paper-grain), #FBF8F1; box-shadow: 0 0 0 1px rgb(42 45 94 / .14), 2px 3px 0 rgb(42 45 94 / .14);
   transition: transform .2s cubic-bezier(.3,1.8,.5,1);
 }
-.env-card .mini .art { aspect-ratio: 1; height: auto; }
-.env-card .mini .art.photo { position: absolute; inset: 6%; aspect-ratio: auto; height: auto; }
+.env-card .mini.has-photo { padding: 4% 4% 7%; }
+.env-card .mini .art { width: 100%; aspect-ratio: 1; height: auto; align-self: start; } /* matches where the full card puts it */
+.env-card .mini .art.photo, .env-card .mini .art.pending { aspect-ratio: auto; height: 100%; align-self: stretch; }
+/* Same proportions as the full card's text (sized to the card's width), just smaller. */
+.env-card .mini .pencil { gap: .95cqw; }
+.env-card .mini .pencil > * { clip-path: none; transition: none; } /* the full card writes its text in; stash copies just show it */
+.env-card .mini .pencil .t { font-size: 5.75cqw; }
+.env-card .mini .pencil .where { font-size: 3.2cqw; }
 .env-item.open .env-card:hover .mini, .env-card:focus-visible .mini { transform: translateY(-8px) rotate(-1deg); }
 body:has(.overlay.viewing:not([hidden])) .env-card .mini { transform: none !important; transition: none; } /* hold still while it's being viewed */
 
