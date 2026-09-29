@@ -498,10 +498,14 @@
     if (body) {
       const item = body.closest(".env-item"), key = item.dataset.key;
       const open = !item.classList.contains("open");
-      open ? openEnvelopes.add(key) : openEnvelopes.delete(key);
-      item.classList.toggle("open", open);
-      body.setAttribute("aria-expanded", String(open));
-      item.querySelectorAll(".env-card").forEach((c) => (open ? c.removeAttribute("tabindex") : c.setAttribute("tabindex", "-1")));
+      const setOpen = (it, on) => {
+        it.classList.toggle("open", on);
+        it.querySelector(".env-body").setAttribute("aria-expanded", String(on));
+        it.querySelectorAll(".env-card").forEach((c) => (on ? c.removeAttribute("tabindex") : c.setAttribute("tabindex", "-1")));
+        on ? openEnvelopes.add(it.dataset.key) : openEnvelopes.delete(it.dataset.key);
+      };
+      if (open) $("envelopes").querySelectorAll(".env-item.open").forEach((other) => setOpen(other, false)); // one open at a time
+      setOpen(item, open);
       sfx.slide();
       return;
     }
