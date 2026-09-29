@@ -72,9 +72,19 @@
       swish() { noise(.4, .1, 2600); },
       roll() { noise(.95, .07, 500, "lowpass"); },
       chime() { [784, 988, 1318].forEach((f, i) => tone(f, .6, "triangle", .07, i * .09)); },
+      // Browsers keep audio muted until the visitor interacts; call this from a click/tap/key handler.
+      unlock() {
+        if (!on) return;
+        try { ctx ||= new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
+        if (ctx.state !== "running") ctx.resume().catch(() => {});
+      },
       get on() { return on; }, set on(v) { on = v; save("sound", v); }
     };
   })();
+  // The first click, tap or key press anywhere unlocks sound, even mid-spin, so the ticking joins right in.
+  for (const type of ["pointerdown", "keydown", "touchstart"]) {
+    addEventListener(type, () => sfx.unlock(), { capture: true, passive: true });
+  }
 
   const soundBtn = $("sound");
   const paintSound = () => {
