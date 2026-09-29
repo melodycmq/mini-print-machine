@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 import { redis, redisConfig, keys, slug, locate } from "../lib/store.js";
 import { findCity } from "../lib/cities.js";
 
@@ -63,22 +64,21 @@ function missingConfig() {
 async function createSet(cityKey, place, step) {
   step.name = "claude";
   const where = [place.city, place.region, place.country].filter(Boolean).join(", ");
-  // Claude fills in a defined structure (tool use) instead of writing JSON as text, so a stray quote mark in a
-  // description can't break parsing. One retry if it still comes back unusable.
+  // Structured outputs: Claude's reply is constrained to PRINT_SET_SCHEMA and arrives already parsed, so a stray
+  // quote mark in a description can't break it. One retry if it still comes back unusable.
   let json = null;
   for (let attempt = 0; attempt < 2 && !json; attempt++) {
     step.name = "claude";
-    const msg = await anthropic.messages.create({
+    const msg = await anthropic.messages.parse({
       model: MODEL,
-      max_tokens: 2500,
-      tools: [PRINT_SET_TOOL],
-      tool_choice: { type: "tool", name: PRINT_SET_TOOL.name },
+      max_tokens: 16000,
       messages: [{ role: "user", content: subjectPrompt(where) }],
+      output_config: { format: jsonSchemaOutputFormat(PRINT_SET_SCHEMA) },
     });
     step.name = "parse-claude-reply";
-    const call = msg.content.find((b) => b.type === "tool_use" && b.name === PRINT_SET_TOOL.name);
-    if (call?.input && Array.isArray(call.input.prints) && call.input.prints.length >= 6) json = call.input;
-    else console.warn("unusable print set from Claude, attempt", attempt + 1, JSON.stringify(msg.content).slice(0, 500));
+    const out = msg.stop_reason === "refusal" ? null : msg.parsed_output;
+    if (out && Array.isArray(out.prints) && out.prints.length >= 6) json = out;
+    else console.warn("unusable print set from Claude, attempt", attempt + 1, msg.stop_reason, JSON.stringify(msg.content).slice(0, 500));
   }
   if (!json) throw new Error("Claude didn't return a usable set of 6 prints");
   const seen = new Set();
@@ -124,36 +124,34 @@ cultural references a resident would smile at. At most ONE well-known landmark, 
 an unexpected, playful way. Avoid anything generic that could be from anywhere, and avoid the obvious
 postcard list. If the place is small, draw from its surrounding region.
 
-Save the set with the save_print_set tool.`;
+Return the six prints and the edition name in the required format.`;
 }
 
-const PRINT_SET_TOOL = {
-  name: "save_print_set",
-  description: "Save the six prints chosen for this place.",
-  input_schema: {
-    type: "object",
-    properties: {
-      edition: { type: "string", description: 'The place name as it should appear on the machine, e.g. "Chicago" or "Lower Manhattan".' },
-      prints: {
-        type: "array",
-        minItems: 6,
-        maxItems: 6,
-        items: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Short lowercase slug, unique within the set." },
-            title: { type: "string", description: "1–4 word English name for the print (can be playful)." },
-            where: { type: "string", description: "Short English location label printed on the card (a street, neighborhood or venue; max 24 characters)." },
-            subject_zh: { type: "string", description: "One or two sentences in Chinese for an illustrator: the subject, what it is doing, its most recognizable silhouette or gesture, and the small story or feeling of the moment. No written words, signs with text, logos or numbers in the scene." },
-            inks: {
-              type: "array", minItems: 3, maxItems: 4, items: { type: "string", description: "Hex color like #1F4686" },
-              description: "3 or 4 spot ink colors that suit this subject, lightest to darkest. The last is a deep key ink for the thin structural lines. Bold, printable colors; no near-whites.",
-            },
+// The shape of one city's set. Counts (exactly 6 prints, 3–4 inks) are checked in code after parsing.
+const PRINT_SET_SCHEMA = {
+  type: "object",
+  properties: {
+    edition: { type: "string", description: 'The place name as it should appear on the machine, e.g. "Chicago" or "Lower Manhattan".' },
+    prints: {
+      type: "array",
+      description: "Exactly six prints.",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Short lowercase slug, unique within the set." },
+          title: { type: "string", description: "1–4 word English name for the print (can be playful)." },
+          where: { type: "string", description: "Short English location label printed on the card (a street, neighborhood or venue; max 24 characters)." },
+          subject_zh: { type: "string", description: "One or two sentences in Chinese for an illustrator: the subject, what it is doing, its most recognizable silhouette or gesture, and the small story or feeling of the moment. No written words, signs with text, logos or numbers in the scene." },
+          inks: {
+            type: "array", items: { type: "string" },
+            description: "3 or 4 spot ink colors as hex codes (like #1F4686) that suit this subject, lightest to darkest. The last is a deep key ink for the thin structural lines. Bold, printable colors; no near-whites.",
           },
-          required: ["id", "title", "where", "subject_zh", "inks"],
         },
+        required: ["id", "title", "where", "subject_zh", "inks"],
+        additionalProperties: false,
       },
     },
-    required: ["edition", "prints"],
   },
+  required: ["edition", "prints"],
+  additionalProperties: false,
 };
