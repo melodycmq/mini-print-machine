@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vercel dev",
     "deploy": "vercel deploy --prod",
-    "check": "node --check api/set.js && node --check api/print.js && node --check lib/store.js && node --check lib/style-prompt.js && node --check public/app.js"
+    "check": "node --check api/set.js && node --check api/print.js && node --check lib/store.js && node --check lib/style-prompt.js && node --check public/app.js && node scripts/smoke-set.mjs",
+    "smoke": "node scripts/smoke-set.mjs"
   },
   "engines": {
     "node": ">=20"
