@@ -69,22 +69,32 @@ async function createSet(cityKey, place, step) {
   const where = [place.city, place.region, place.country].filter(Boolean).join(", ");
   // Structured outputs: Claude's reply is constrained to PRINT_SET_SCHEMA and arrives already parsed, so a stray
   // quote mark in a description can't break it. One retry if it still comes back unusable.
-  let json = null;
-  for (let attempt = 0; attempt < 2 && !json; attempt++) {
+  let json = null, clash = "";
+  for (let attempt = 0; attempt < 3 && !json; attempt++) {
     step.name = "claude";
     const started = Date.now();
     const msg = await anthropic.messages.parse({
       model: MODEL,
       max_tokens: 16000,
-      messages: [{ role: "user", content: subjectPrompt(where) }],
+      messages: [{ role: "user", content: subjectPrompt(where) + clash }],
       // A short, simple list: low effort keeps it quick (thinking depth is the main cost of latency here).
       output_config: { format: jsonSchemaOutputFormat(PRINT_SET_SCHEMA), effort: CLAUDE_EFFORT },
     });
     console.log(`timing set ${cityKey}: claude ${Date.now() - started}ms (effort ${CLAUDE_EFFORT}, attempt ${attempt + 1})`);
     step.name = "parse-claude-reply";
     const out = msg.stop_reason === "refusal" ? null : msg.parsed_output;
-    if (out && Array.isArray(out.prints) && out.prints.length >= 6) json = out;
-    else console.warn("unusable print set from Claude, attempt", attempt + 1, msg.stop_reason, JSON.stringify(msg.content).slice(0, 500));
+    if (!(out && Array.isArray(out.prints) && out.prints.length >= 6)) {
+      console.warn("unusable print set from Claude, attempt", attempt + 1, msg.stop_reason, JSON.stringify(msg.content).slice(0, 500));
+      continue;
+    }
+    // Six different kinds of thing, checked rather than just asked for (xiaolongbao and shengjianbao are both dumplings).
+    const dupes = duplicateKinds(out.prints.slice(0, 6));
+    if (dupes.length && attempt < 2) {
+      console.warn(`duplicate kinds in ${cityKey}: ${dupes.join(", ")}; asking again`);
+      clash = `\n\nImportant: a previous attempt had more than one print of the same kind (${dupes.join(", ")}). Every print must be a different kind of thing; different varieties of the same thing count as the same kind.`;
+      continue;
+    }
+    json = out;
   }
   if (!json) throw new Error("Claude didn't return a usable set of 6 prints");
   const seen = new Set();
@@ -119,7 +129,7 @@ well-known symbols, beloved local animals and everyday objects that everyone ass
 insider-only references. If the place is small, draw from its surrounding region.
 
 All six must be clearly different from each other: never two of the same kind of thing (one pizza at most, one cat at
-most, one coffee at most, and so on), spread across different categories (food or drink, a landmark or symbol, an
+most, one coffee at most, one dumpling of any variety, and so on; label each with its generic "kind"), spread across different categories (food or drink, a landmark or symbol, an
 animal, an everyday object, something worn or carried).
 
 Each print is a simple drawing of ONE main object (at most two), not a scene: no setting, no crowd, no room, no
@@ -137,6 +147,14 @@ Aim for a clear, happy contrast between the bright and the pastels (a slice in t
 cobalt with sky; a pigeon in violet with lilac and mint). No black. The white paper is not an ink and never needs listing.`;
 }
 
+// Kinds that appear more than once, compared loosely (case, spaces, simple plurals).
+function duplicateKinds(prints) {
+  const norm = (k) => String(k || "").toLowerCase().trim().replace(/[^a-z ]/g, "").replace(/(es|s)$/, "");
+  const seen = new Map();
+  for (const p of prints) { const k = norm(p.kind || p.title); seen.set(k, (seen.get(k) || 0) + 1); }
+  return [...seen].filter(([k, n]) => k && n > 1).map(([k]) => k);
+}
+
 // The shape of one city's set. Counts (exactly 6 prints, 2-4 inks) are checked in code after parsing.
 const PRINT_SET_SCHEMA = {
   type: "object",
@@ -150,11 +168,12 @@ const PRINT_SET_SCHEMA = {
         properties: {
           id: { type: "string", description: "Short lowercase slug, unique within the set." },
           title: { type: "string", description: "1–4 word English name of the subject." },
+          kind: { type: "string", description: 'The generic kind of thing in one plain English word or two, e.g. "dumpling", "tower", "bicycle", "cat", "dress". Different varieties of the same thing share a kind. Must differ across all six.' },
           where: { type: "string", description: "Short English location label printed on the card (a street, neighborhood, park or venue; max 24 characters)." },
           subject_zh: { type: "string", description: "One sentence in Chinese describing just that object for an illustrator: what it is, its most recognizable silhouette or pose, and at most one small charming detail. No scene, no background, nothing with written words." },
           inks: { type: "array", items: { type: "string" }, description: "One bright ink name (rarely two) plus one or two pastel ink names, all from the palette." },
         },
-        required: ["id", "title", "where", "subject_zh", "inks"],
+        required: ["id", "title", "kind", "where", "subject_zh", "inks"],
         additionalProperties: false,
       },
     },

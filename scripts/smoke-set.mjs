@@ -6,7 +6,7 @@ process.env.KV_REST_API_TOKEN ||= "test";
 
 const fakeSet = {
   edition: "Testville",
-  prints: ["a", "b", "c", "d", "e", "f"].map((id, i) => ({ id, title: `Thing ${i}`, where: "Main St.", subject_zh: "一个“小”物件", inks: ["cobalt", "#ff00ff"] })),
+  prints: ["a", "b", "c", "d", "e", "f"].map((id, i) => ({ id, title: `Thing ${i}`, kind: `thing${"abcdef"[i]}`, where: "Main St.", subject_zh: "一个“小”物件", inks: ["cobalt", "#ff00ff"] })),
 };
 let claudeRequest = null;
 globalThis.fetch = async (url, init = {}) => {
