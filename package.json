@@ -1,0 +1,23 @@
+{
+  "name": "mini-print-machine",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel deploy --prod",
+    "check": "node --check api/set.js && node --check api/print.js && node --check lib/store.js && node --check lib/style-prompt.js && node --check public/app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
+    "@vercel/blob": "^2.8.0",
+    "openai": "^7.24.0"
+  },
+  "devDependencies": {
+    "vercel": "^61.0.0"
+  }
+}

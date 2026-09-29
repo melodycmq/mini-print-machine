@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mini Print Machine</title>
+<meta name="description" content="Feed a hand-drawn vending machine four quarters and get a tiny surprise print of the place you're standing in.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Londrina+Solid:wght@300;400;900&display=swap">
+<style>
+/* Layout: one hand-drawn vending machine, centered like it's bolted to a bodega wall; your stash of prints collects underneath. */
+:root {
+  --paper: #FFF6D8;
+  --panel: #FFFEF8;
+  --red: #E0312B;
+  --red-deep: #A91F1A;
+  --tray: #ECE7DA;
+  --ink: #2A2D5E;
+  --pencil: #625D7A;
+  --metal: #D9DBE7;
+  --metal-2: #B7BBD3;
+  --metal-deep: #8F95B8;
+  --metal-line: #6C7399;
+  --shade: repeating-linear-gradient(-48deg, rgb(42 45 94 / .24) 0 1.3px, transparent 1.3px 4.2px);
+  --speck: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 3.6 0 0 0 -2.15'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .38 0 0 0 0 .33 0 0 0 .32 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .09' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .45 0 0 0 0 .4 0 0 0 .16 -.06'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --hatch: repeating-linear-gradient(38deg, rgb(255 255 255 / .13) 0 1.5px, transparent 1.5px 6px);
+  --label: #2F4EA0;
+  --veil: rgb(255 246 216 / .94);
+  --display: "Amatic SC", "Chalkboard SE", "Marker Felt", cursive;
+  --block: "Londrina Solid", "Arial Rounded MT Bold", sans-serif;
+  --hand: "Londrina Solid", "Chalkboard SE", sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); }
+body { font-family: var(--hand); font-weight: 300; letter-spacing: .02em; -webkit-font-smoothing: antialiased; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+button, input { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible { outline: 3px dashed var(--label); outline-offset: 4px; border-radius: 6px; }
+[hidden] { display: none !important; }
+
+main { padding-block: 40px 56px; padding-inline: 16px; display: grid; justify-items: center; gap: 48px; position: relative; }
+
+.sound {
+  position: absolute; top: 12px; right: 16px;
+  font-family: var(--hand); font-size: .95rem; color: var(--pencil);
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px;
+}
+.sound svg { width: 20px; height: 20px; }
+
+/* ---------- the machine ---------- */
+.machine-wrap { position: relative; width: min(100%, 520px); }
+.machine-wrap::before {
+  content: ""; position: absolute; inset: 0; transform: translate(12px, 14px);
+  border-radius: 18px 26px 20px 24px / 24px 18px 26px 20px;
+  background: var(--shade); filter: url(#rough);
+}
+.machine {
+  position: relative; z-index: 1; width: 100%;
+  padding: 20px; background: var(--paper);
+  border-radius: 18px 26px 20px 24px / 24px 18px 26px 20px;
+}
+.machine::before, .machine::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  border-radius: 18px 26px 20px 24px / 24px 18px 26px 20px;
+}
+.machine::before { border: 15px solid var(--red); filter: url(#crayon-frame); }
+.machine::after { inset: 13px; border: 2.5px solid var(--red-deep); border-radius: 10px 14px 9px 13px; filter: url(#rough); opacity: .55; }
+.bolt { position: absolute; top: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--metal); box-shadow: inset 0 0 0 1.5px var(--metal-line); z-index: 4; }
+.bolt.l { left: 5px; } .bolt.r { right: 5px; }
+.machine-wrap.rumble { animation: rumble .5s linear 2; }
+@keyframes rumble {
+  0%,100% { transform: translate(0,0) rotate(0); }
+  20% { transform: translate(-2px,1px) rotate(-.4deg); }
+  40% { transform: translate(2px,-1px) rotate(.4deg); }
+  60% { transform: translate(-1px,-1px) rotate(-.2deg); }
+  80% { transform: translate(1px,1px) rotate(.3deg); }
+}
+
+.panel {
+  position: relative; background: var(--panel);
+  padding: 30px 18px 22px; text-align: center;
+  display: grid; justify-items: center; gap: 16px;
+  background-image: radial-gradient(rgb(34 31 28 / .035) 1px, transparent 1.2px);
+  background-size: 7px 7px;
+}
+h1 {
+  margin: 0; font-family: var(--block); font-weight: 900; line-height: 1;
+  font-size: clamp(1.8rem, 7.4vw, 2.55rem); letter-spacing: .05em; text-transform: uppercase;
+  text-wrap: balance;
+}
+h1 .ch { display: inline-block; transition: transform .25s cubic-bezier(.3,1.8,.5,1); }
+h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
+.edition { margin: -6px 0 0; transform: rotate(-2deg); }
+.edition-btn { font-family: var(--display); font-weight: 700; color: var(--red); font-size: 1.7rem; letter-spacing: .14em; text-transform: uppercase; }
+.edition-btn .change { font-size: .8rem; letter-spacing: .1em; color: var(--pencil); margin-left: .5em; opacity: 0; transition: opacity .2s; font-family: var(--hand); text-transform: none; }
+.edition-btn:hover .change, .edition-btn:focus-visible .change { opacity: 1; }
+.edition.loading .edition-btn { animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .45; } }
+.city-form { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: -4px; }
+.city-form input { width: min(220px, 60vw); padding: 6px 10px; background: var(--panel); border: 2px solid var(--ink); border-radius: 10px 7px 11px 8px; font-size: 1rem; }
+.city-form button { font-family: var(--display); font-weight: 700; font-size: 1.2rem; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-bottom: 2px solid var(--red); }
+
+.lineup { list-style: none; margin: 4px 0 0; padding: 0; width: 100%; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.lineup li { position: relative; aspect-ratio: 1; animation: bob 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * -.53s); }
+.lineup .art { filter: url(#rough-boil); transition: transform .3s cubic-bezier(.3,1.8,.5,1); }
+.lineup .art.photo { overflow: hidden; }
+.lineup .art.photo img { transform: scale(2.3); }
+.lineup li:hover .art { transform: rotate(-8deg) scale(1.15); }
+.lineup li .tip {
+  position: absolute; left: 50%; bottom: -1.2rem; transform: translateX(-50%);
+  font-family: var(--hand); font-size: .85rem; white-space: nowrap; color: var(--pencil);
+  opacity: 0; transition: opacity .2s; pointer-events: none;
+}
+.lineup li:hover .tip { opacity: 1; }
+@keyframes bob { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(1.5deg); } }
+
+.rule { margin: 10px 0 0; font-family: var(--display); font-weight: 700; font-size: clamp(1.55rem, 6vw, 1.9rem); letter-spacing: .08em; text-transform: uppercase; }
+.makers { margin: 4px 0 0; display: flex; align-items: center; gap: 14px; font-size: 1rem; color: var(--pencil); }
+.stamp {
+  font-family: var(--block); font-weight: 400; font-size: .78rem; line-height: 1.05; letter-spacing: .1em; text-transform: uppercase;
+  border: 2px solid var(--ink); padding: 5px 8px; border-radius: 8px 5px 9px 6px; transform: rotate(-3deg); color: var(--ink);
+  filter: url(#rough);
+}
+
+/* ---------- slot tray ---------- */
+.tray {
+  padding: 18px 12px 16px;
+  background: var(--shade) top / 100% 8px no-repeat, var(--tray);
+  display: grid; gap: 12px;
+}
+.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(8px, 3vw, 18px); align-items: start; min-height: 150px; }
+.slot { display: grid; position: relative; width: 100%; perspective: 500px; }
+.slot[aria-disabled="true"] { cursor: default; }
+.cover {
+  position: relative; z-index: 2; height: 66px; border-radius: 10px 12px 5px 7px;
+  background:
+    var(--speck),
+    repeating-linear-gradient(90deg, transparent 0 7px, var(--metal-line) 7px 9.5px, transparent 9.5px 14px) center 9px / 70% 34px no-repeat,
+    var(--hatch),
+    var(--metal);
+  border: 2.5px solid var(--metal-line);
+  filter: url(#rough);
+  transform-origin: 50% 0;
+  transition: transform .35s cubic-bezier(.3,1.6,.5,1);
+}
+.cover::after {
+  content: ""; position: absolute; left: 6px; right: 6px; bottom: 6px; height: 6px;
+  background: radial-gradient(circle at 3px 3px, var(--metal-line) 2.2px, transparent 2.7px) left / 6px 6px no-repeat,
+              radial-gradient(circle at 3px 3px, var(--metal-line) 2.2px, transparent 2.7px) right / 6px 6px no-repeat;
+}
+.slot:not([aria-disabled="true"]):hover .cover { transform: rotateX(8deg); }
+.slot.open .cover { animation: pop .45s cubic-bezier(.3,1.6,.5,1); }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.06, .94); } 100% { transform: scale(1); } }
+
+.slot-shade { position: absolute; inset: 0; z-index: 0; transform: translate(5px, 7px); border-radius: 10px 12px 10px 12px; background: var(--shade); filter: url(#rough); pointer-events: none; }
+.window { position: relative; z-index: 1; display: grid; grid-template-rows: 0fr auto; margin-inline: 6%; transition: grid-template-rows .45s cubic-bezier(.3,1.35,.5,1); }
+.slot.open .window { grid-template-rows: 1fr auto; }
+.bed { min-height: 0; overflow: hidden; display: flex; align-items: flex-end; }
+.wells {
+  width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 7px 6px;
+  background: var(--speck), var(--shade) top / 100% 7px no-repeat, var(--metal-2);
+  border-inline: 2.5px solid var(--metal-line);
+}
+.well { aspect-ratio: 1; border-radius: 50%; background: var(--shade) top / 100% 45% no-repeat, var(--metal-deep); box-shadow: inset 0 0 0 2px var(--metal-line); display: grid; }
+.well .coin { width: 100%; height: 100%; animation: settle .3s ease-out; }
+.well .coin.out { animation: out .45s ease-in forwards; }
+@keyframes settle { 0% { transform: rotate(-20deg) scale(1.1); } 60% { transform: rotate(8deg); } 100% { transform: none; } }
+@keyframes out { to { transform: translateY(30px) rotate(90deg); opacity: 0; } }
+.lip {
+  display: grid; place-items: center; padding: 5px 4px 6px; border-radius: 0 0 9px 11px;
+  background: var(--speck), var(--hatch), var(--metal);
+  border: 2.5px solid var(--metal-line); border-top-width: 1.5px;
+  filter: url(#rough);
+}
+.price {
+  font-family: var(--block); font-weight: 400; font-size: clamp(.8rem, 3vw, .95rem);
+  background: var(--panel); color: var(--ink);
+  border: 2.5px solid var(--label); border-radius: 999px 880px 999px 900px; padding: 1px 9px;
+}
+.slot.ready .price { animation: nudge 1s ease-in-out infinite; background: var(--red); color: var(--panel); border-color: var(--red-deep); }
+@keyframes nudge { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.count { position: absolute; z-index: 3; top: 8px; right: -6px; font-family: var(--block); font-weight: 900; font-size: 1rem; color: var(--red); transform: rotate(8deg); opacity: 0; transition: opacity .2s; }
+.slot.open .count { opacity: 1; }
+
+.status { margin: 0; min-height: 1.6em; text-align: center; font-family: var(--hand); font-size: 1.12rem; color: var(--pencil); }
+.status b { color: var(--red); font-weight: 400; }
+
+.fly-coin { position: fixed; z-index: 50; pointer-events: none; }
+.coin { display: block; }
+
+/* ---------- print art: hand-drawn SVG (NYC fallback) or a generated image ---------- */
+.art { position: relative; display: block; width: 100%; height: 100%; }
+.art svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.art .lines .l { fill: none; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.art text { font-family: var(--display); font-weight: 700; }
+.art.photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; }
+.art.pending { display: grid; place-items: center; }
+.art.pending span { font-family: var(--display); font-weight: 700; font-size: 1.4rem; letter-spacing: .12em; color: rgb(98 93 122 / .6); animation: blink 1.4s ease-in-out infinite; }
+
+/* ---------- stash ---------- */
+.stash { width: min(100%, 640px); display: grid; gap: 16px; }
+.stash header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.stash h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 2.2rem; letter-spacing: .08em; text-transform: uppercase; line-height: 1; }
+.stash .tally { font-family: var(--hand); font-size: 1.05rem; color: var(--pencil); }
+.stash .tally b { color: var(--red); }
+.tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+@media (max-width: 440px) { .tiles { grid-template-columns: repeat(3, 1fr); } }
+.tile { display: grid; gap: 6px; justify-items: center; text-align: center; }
+.tile .mini {
+  position: relative; width: 100%; aspect-ratio: 5 / 7; padding: 8%;
+  display: grid; align-content: center;
+  transform: rotate(var(--tilt)); transition: transform .3s cubic-bezier(.3,1.8,.5,1);
+}
+.tile .mini::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--paper-grain), #FBF8F1; }
+.tile .mini::after { content: ""; position: absolute; inset: 0; z-index: -2; transform: translate(5px, 6px); background: var(--shade); filter: url(#rough); }
+.tile .mini .art { aspect-ratio: 1; height: auto; }
+.tile .mini .art.photo { position: absolute; inset: 0; aspect-ratio: auto; height: 100%; }
+.tile:hover .mini { transform: rotate(0) translateY(-4px); }
+.tile.empty { cursor: default; }
+.tile.empty .mini { display: grid; place-items: center; }
+.tile.empty .mini::after { display: none; }
+.tile.empty .mini::before { content: ""; position: absolute; inset: 0; z-index: 0; background: transparent; border: 2px dashed rgb(98 93 122 / .45); border-radius: 4px; filter: url(#rough); }
+.tile.empty .mini span { font-family: var(--display); font-weight: 700; font-size: 2.4rem; color: rgb(98 93 122 / .5); }
+.stash.complete h2::after { content: "  ✶ full set!"; color: var(--red); }
+
+footer { font-family: var(--hand); font-size: 1rem; color: var(--pencil); text-align: center; max-width: 38ch; line-height: 1.35; }
+footer a { color: var(--red); }
+
+/* ---------- print overlay ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 40; background: var(--veil);
+  display: grid; place-items: center; align-content: center; gap: 22px; padding: 24px 16px;
+  opacity: 0; transition: opacity .3s;
+  --cw: min(210px, 40vw);
+}
+.overlay.show { opacity: 1; }
+.overlay.viewing { --cw: min(320px, 72vw); cursor: zoom-out; }
+.overlay.viewing .press-bar, .overlay.viewing .actions { display: none; }
+.overlay.viewing .press { padding-bottom: 0; }
+.press { display: grid; justify-items: center; padding-bottom: 50px; }
+.press-bar {
+  position: relative; z-index: 2; width: calc(var(--cw) + 56px); height: 30px;
+  background: var(--speck), var(--hatch), var(--red); border-radius: 10px 12px 8px 11px;
+  display: grid; place-items: center; filter: url(#rough);
+  box-shadow: inset 0 -6px 0 var(--red-deep);
+}
+.press-bar::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: 5px; height: 4px; border-radius: 4px; background: var(--ink); }
+.press-bar span { font-family: var(--display); font-weight: 700; font-size: 1.2rem; letter-spacing: .2em; color: var(--panel); transform: translateY(-3px); }
+.mouth { width: var(--cw); height: calc(var(--cw) * 1.4); perspective: 1400px; margin-top: -4px; }
+.mouth.clip { overflow: hidden; }
+.card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transform: translateY(-101%); }
+.card-shade { position: absolute; inset: 0; transform: translate3d(10px, 12px, -1px); background: var(--shade); filter: url(#rough); }
+.face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.inside {
+  background: var(--paper-grain), #FBF8F1; padding: 8% 8% 9%; display: grid; grid-template-rows: 1fr auto; gap: 2%;
+  overflow: hidden;
+}
+.inside .art { width: 100%; aspect-ratio: 1; height: auto; align-self: center; }
+.inside .art.photo, .inside .art.pending { aspect-ratio: auto; height: 100%; align-self: stretch; }
+.inside.has-photo { padding: 4% 4% 7%; }
+.inside .art .fills { clip-path: inset(0 100% 0 0); transition: clip-path .95s cubic-bezier(.55,.1,.45,.9); }
+.inside.rolled .art .fills { clip-path: inset(0 0 0 0); }
+.inside .art .lines .l { stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0; }
+.inside .art .lines .f { opacity: 0; }
+.inside.inked .art .lines .l { animation: draw .6s ease forwards calc(var(--i) * 60ms); }
+.inside.inked .art .lines .f { animation: fade .3s ease forwards calc(var(--i) * 60ms); }
+@keyframes draw { 0% { opacity: 0; stroke-dashoffset: 1; } 2% { opacity: 1; } 100% { opacity: 1; stroke-dashoffset: 0; } }
+@keyframes fade { to { opacity: 1; } }
+.brayer {
+  position: absolute; top: -4%; bottom: -4%; left: -16%; width: 13%;
+  background: var(--speck), var(--hatch), var(--red);
+  border-radius: 9px 7px 10px 8px; opacity: 0; pointer-events: none;
+  box-shadow: 0 0 0 2.5px var(--red-deep);
+}
+.inside.rolled .brayer { animation: roll .95s cubic-bezier(.55,.1,.45,.9) forwards; }
+@keyframes roll { 0% { left: -16%; opacity: 1; } 90% { opacity: 1; } 100% { left: 104%; opacity: 0; } }
+.pencil { display: grid; justify-items: center; align-content: center; color: var(--pencil); }
+.pencil .where { font-family: var(--display); font-weight: 700; font-size: clamp(.95rem, 3.8vw, 1.2rem); letter-spacing: .2em; }
+.pencil > * { clip-path: inset(0 100% 0 0); transition: clip-path .8s linear; }
+.inside.signed .pencil > * { clip-path: inset(0 0 0 0); }
+
+.cover-leaf { position: absolute; inset: 0; transform-origin: 0 50%; transform-style: preserve-3d; transition: transform .95s cubic-bezier(.5,0,.2,1); }
+.card.open .cover-leaf { transform: rotateY(-178deg); }
+.leaf-front {
+  background: var(--red); color: var(--panel); display: grid; place-items: center; text-align: center; padding: 12%;
+  background-image: var(--speck), var(--hatch);
+}
+.leaf-front .seal { display: grid; gap: 4px; justify-items: center; border: 2.5px solid var(--panel); padding: 14px 10px; border-radius: 50% 48% 52% 46%; aspect-ratio: 1; align-content: center; width: 100%; filter: url(#rough); }
+.leaf-front .seal b { font-family: var(--block); font-weight: 900; font-size: clamp(1rem, 4.2vw, 1.35rem); letter-spacing: .08em; line-height: 1; }
+.leaf-front .seal small { font-family: var(--display); font-weight: 700; font-size: clamp(1rem, 4vw, 1.25rem); letter-spacing: .04em; }
+.leaf-front .seal svg { width: 34%; }
+
+.actions { display: grid; justify-items: center; gap: 10px; opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .35s; pointer-events: none; }
+.actions.show { opacity: 1; transform: none; pointer-events: auto; }
+.actions .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.btn {
+  position: relative; font-family: var(--display); font-size: 1.45rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; line-height: 1; padding: 9px 20px;
+  transition: transform .2s cubic-bezier(.3,1.8,.5,1); isolation: isolate;
+}
+.btn::before { content: ""; position: absolute; inset: 0; border: 3px solid var(--ink); border-radius: 12px 9px 13px 8px; filter: url(#rough); z-index: -1; background: transparent; }
+.btn::after { content: ""; position: absolute; inset: 0; z-index: -2; transform: translate(4px, 5px); border-radius: 12px 9px 13px 8px; background: var(--shade); filter: url(#rough); }
+.btn.primary { color: var(--panel); }
+.btn.primary::before { background: var(--speck), var(--hatch), var(--red); border-color: var(--red-deep); }
+.btn:hover { transform: rotate(-1.5deg) scale(1.03); }
+
+.instant *, .instant { transition: none !important; }
+.instant .inside * { animation-duration: 0s !important; animation-delay: 0s !important; }
+.instant .brayer { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough-boil" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="1" result="n">
+        <animate class="boil" attributeName="seed" values="1;5;9" dur="0.75s" calcMode="discrete" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="crayon-line" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="6" result="g"/>
+      <feColorMatrix in="g" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -4 0 0 0 3.3" result="ga"/>
+      <feComposite in="SourceGraphic" in2="ga" operator="in" result="t"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="7" result="w"/>
+      <feDisplacementMap in="t" in2="w" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="crayon-frame" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="2" seed="2" result="g"/>
+      <feColorMatrix in="g" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -5 0 0 0 4.15" result="ga"/>
+      <feComposite in="SourceGraphic" in2="ga" operator="in" result="t"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="1" result="w">
+        <animate class="boil" attributeName="seed" values="1;5;9" dur="0.75s" calcMode="discrete" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="t" in2="w" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="acrylic" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.24" numOctaves="2" seed="3" result="streak"/>
+      <feColorMatrix in="streak" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.1 -0.52" result="lite"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="1" seed="8" result="g"/>
+      <feColorMatrix in="g" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -7 0 0 0 5.3" result="ga"/>
+      <feComposite in="SourceGraphic" in2="ga" operator="in" result="grainy"/>
+      <feComposite in="lite" in2="grainy" operator="in" result="liteIn"/>
+      <feMerge result="paint"><feMergeNode in="grainy"/><feMergeNode in="liteIn"/></feMerge>
+      <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="11" result="w"/>
+      <feDisplacementMap in="paint" in2="w" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="pen" x="-6%" y="-6%" width="112%" height="112%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="5" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="1.7" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(38)">
+      <path d="M0 1.2 H5" stroke="#1D1640" stroke-opacity=".12" stroke-width="1.1"/>
+      <path d="M0 3.7 H5" stroke="#FFFFFF" stroke-opacity=".2" stroke-width=".8"/>
+    </pattern>
+  </defs>
+</svg>
+
+<main>
+  <button class="sound" id="sound" type="button" aria-pressed="true"></button>
+
+  <div class="machine-wrap" id="machine"><div class="machine">
+    <span class="bolt l"></span><span class="bolt r"></span>
+    <div class="panel">
+      <h1 id="title" aria-label="Mini Print Vending Machine">Mini Print<br>Vending Machine</h1>
+      <p class="edition" id="edition"><button class="edition-btn" id="edition-btn" type="button" aria-label="Change city"><span id="edition-name">New York City</span> edition<span class="change">change</span></button></p>
+      <form class="city-form" id="city-form" hidden>
+        <input id="city-input" type="text" autocomplete="address-level2" placeholder="Type a city" aria-label="City">
+        <button type="submit">Print here</button>
+        <button type="button" id="city-auto">Use my location</button>
+      </form>
+      <ul class="lineup" id="lineup" aria-label="Prints in this machine"></ul>
+      <p class="rule">4 Quarters = 1 Surprise Print</p>
+      <div class="makers">
+        <span class="stamp" id="stamp">Hand-pulled<br>in New York City</span>
+      </div>
+    </div>
+    <div class="tray">
+      <div class="slots" id="slots"></div>
+      <p class="status" id="status" aria-live="polite">Pick a slot to start.</p>
+    </div>
+  </div></div>
+
+  <section class="stash" id="stash" aria-labelledby="stash-h">
+    <header>
+      <h2 id="stash-h">Your Stash</h2>
+      <span class="tally" id="tally"></span>
+    </header>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <footer>A love letter to the mini print vending machines by <a href="https://inciardiprints.com/pages/about" target="_blank" rel="noopener">Ana Inciardi</a>. Go feed a real one some quarters.</footer>
+</main>
+
+<div class="overlay" id="overlay" hidden tabindex="-1" role="dialog" aria-modal="true" aria-label="Your print">
+  <div class="press">
+    <div class="press-bar" aria-hidden="true"><span>FRESH PRINTS</span></div>
+    <div class="mouth clip" id="mouth">
+      <div class="card" id="card">
+        <div class="card-shade" aria-hidden="true"></div>
+        <div class="face inside" id="inside">
+          <div id="art-slot"></div>
+          <div class="pencil">
+            <span class="where" id="p-where"></span>
+          </div>
+          <div class="brayer" aria-hidden="true"></div>
+        </div>
+        <div class="cover-leaf">
+          <div class="face leaf-front">
+            <div class="seal">
+              <b>MINI<br>PRINT</b>
+              <span id="seal-coin"></span>
+              <small>a surprise for you</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="actions" id="actions">
+    <div class="row">
+      <button class="btn primary" id="again" type="button">Spend another dollar</button>
+      <button class="btn" id="close" type="button">Back to the machine</button>
+    </div>
+  </div>
+</div>
+
+<script src="/nyc-prints.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
