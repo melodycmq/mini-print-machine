@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 import { redis, redisConfig, keys, slug, locate } from "../lib/store.js";
 import { findCity } from "../lib/cities.js";
+import { PALETTE, toPaletteInks } from "../lib/palette.js";
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
@@ -95,7 +96,7 @@ async function createSet(cityKey, place, step) {
       title: String(p.title || "").slice(0, 40),
       where: String(p.where || place.city).slice(0, 28),
       subject_zh: String(p.subject_zh || p.title || "").slice(0, 400),
-      inks: cleanInks(p.inks),
+      inks: toPaletteInks(p.inks),
     };
   });
   if (prints.length !== 6) throw new Error(`expected 6 prints, got ${prints.length}`);
@@ -106,66 +107,3 @@ async function createSet(cityKey, place, step) {
   const wrote = await redis.set(keys.set(cityKey), set, { nx: true });
   return wrote ? set : await redis.get(keys.set(cityKey));
 }
-
-// 3–4 valid hex inks, or a safe default set (warm, cool, accent, deep key line) if Claude's are unusable.
-const DEFAULT_INKS = ["#F2C14E", "#E4572E", "#4C8FB8", "#232A4D"];
-function cleanInks(inks) {
-  const ok = (Array.isArray(inks) ? inks : [])
-    .map((c) => String(c).trim())
-    .filter((c) => /^#[0-9a-f]{6}$/i.test(c))
-    .filter((c) => { const n = parseInt(c.slice(1), 16); return ((n >> 16) + ((n >> 8) & 255) + (n & 255)) / 3 < 235; }) // no near-whites
-    .slice(0, 4);
-  return ok.length >= 3 ? ok : DEFAULT_INKS;
-}
-
-// Local, story-driven choices of what to draw, each drawn as one or two simple objects (never a scene).
-function subjectPrompt(where) {
-  return `You are curating a set of 6 tiny art prints sold from a vending machine in ${where}.
-The prints should feel like a local's inside joke or a love letter, not a tourism poster.
-
-Pick 6 subjects that are whimsical, cultural and specific to this place: food rituals, street characters and
-animals, everyday objects, customs, festivals, local slang made visible, small habits and quirks, niche
-cultural references a resident would smile at. At most ONE well-known landmark, and only if shown in an
-unexpected, playful way. Avoid anything generic that could be from anywhere, and avoid the obvious postcard list.
-If the place is small, draw from its surrounding region.
-
-Each print is a simple drawing of ONE main object (at most two), not a scene: tell the local story through which
-object you pick and one small playful detail on it, never through a setting, a crowd, a room or a background.
-
-For each print give an id, a 1–4 word English title (can be playful), a short location label for the card, and
-"subject_zh": one sentence in Chinese for an illustrator describing just that object (or pair): what it is, its most
-recognizable silhouette or pose, and the one small detail that makes it local and charming. Nothing with written words.
-
-Also give each print 3 or 4 ink colors as hex codes: vivid, saturated and clean (think fresh screen-print inks), chosen to
-suit the subject, lightest to darkest. No muddy, greyed, brown-grey or olive tones, and no near-whites. The last one is a
-deep ink for the thin structural lines.`;
-}
-
-// The shape of one city's set. Counts (exactly 6 prints, 3–4 inks) are checked in code after parsing.
-const PRINT_SET_SCHEMA = {
-  type: "object",
-  properties: {
-    edition: { type: "string", description: 'The place name as it should appear on the machine, e.g. "Chicago" or "Lower Manhattan".' },
-    prints: {
-      type: "array",
-      description: "Exactly six prints.",
-      items: {
-        type: "object",
-        properties: {
-          id: { type: "string", description: "Short lowercase slug, unique within the set." },
-          title: { type: "string", description: "1–4 word English name for the print (can be playful)." },
-          where: { type: "string", description: "Short English location label printed on the card (a street, neighborhood, park or venue; max 24 characters)." },
-          subject_zh: { type: "string", description: "One sentence in Chinese describing just the one object (or pair) for an illustrator: what it is, its most recognizable silhouette or pose, and the one small detail that makes it local and charming. No scene, no background, nothing with written words." },
-          inks: {
-            type: "array", items: { type: "string" },
-            description: "3 or 4 vivid, saturated, clean ink colors as hex codes (like #1F4686), lightest to darkest; the last is a deep ink for thin structural lines. No muddy or greyed tones, no near-whites.",
-          },
-        },
-        required: ["id", "title", "where", "subject_zh", "inks"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["edition", "prints"],
-  additionalProperties: false,
-};
