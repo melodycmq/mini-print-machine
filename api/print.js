@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { put } from "@vercel/blob";
-import { redis, ratelimit, keys, visitorId, takeFromDailyBudget, refundDailyBudget } from "../lib/store.js";
+import { redis, ratelimit, keys, visitorId, takeFromDailyBudget, refundDailyBudget, nextUtcMidnight } from "../lib/store.js";
 import { printPrompt } from "../lib/style-prompt.js";
 import { separate } from "../lib/separate.js";
 
@@ -38,7 +38,10 @@ export default async function handler(req, res) {
       const { success, reset } = await ratelimit.limit(visitorId(req));
       if (!success) return res.status(429).json({ status: "limited", reason: "rate", resetAt: reset });
     }
-    if (!(await takeFromDailyBudget())) return res.status(503).json({ status: "limited", reason: "budget" });
+    if (!(await takeFromDailyBudget())) {
+      await refundDailyBudget(); // the over-cap attempt itself shouldn't keep counting
+      return res.status(503).json({ status: "limited", reason: "budget", resetAt: nextUtcMidnight() });
+    }
     charged = true;
 
     const t0 = Date.now();
