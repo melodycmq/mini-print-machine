@@ -1,9 +1,13 @@
 (() => {
   const { NYC_PRINTS, artSVG } = window.MiniPrint;
 
-  // The built-in hand-drawn set. Used until the local set loads, and whenever the generator can't deliver.
+  // The hand-drawn New York set is only a stand-in for local previews (no server). The live site never shows it:
+  // before a city loads it shows six blank "?" stickers, and a print that can't be drawn is refunded instead.
+  const DEV = ["localhost", "127.0.0.1"].includes(location.hostname);
   const LOCAL = { key: "local-nyc", edition: "New York City", remote: false, prints: NYC_PRINTS };
-  let SET = LOCAL;
+  const BLANK = { key: "blank", edition: "Your city", remote: false, blank: true,
+                  prints: [1, 2, 3, 4, 5, 6].map((n) => ({ id: `blank-${n}`, title: "", where: "" })) };
+  let SET = DEV ? LOCAL : BLANK;
 
   // ---------- helpers ----------
   const $ = (id) => document.getElementById(id);
@@ -226,7 +230,7 @@
       }, 170);
     }
     window.MiniPrintMap?.travel(true);
-    const fallback = [...new Set([...SET.prints, ...LOCAL.prints].map((p) => artFor(p, "lineup")))];
+    const fallback = [...new Set([...SET.prints, ...(DEV ? LOCAL.prints : [])].map((p) => artFor(p, "lineup")))];
     const faces = () => (reelFaces.length >= 8 ? reelFaces : fallback); // switches to the saved pool the moment it arrives
     flipping = true;
     $("lineup").querySelectorAll("li").forEach((li, i) => flipCard(li, faces, i * 45));
@@ -318,7 +322,8 @@
         say(esc(problem.detail || "We don't print for that place yet."));
       } else {
         console.warn("Couldn't load a set:", problem);
-        if (place) say(`Couldn't reach ${esc(place.city)} right now. Staying in ${esc(SET.edition)}.`);
+        if (place) say(SET.blank ? `Couldn't reach ${esc(place.city)} right now ✶ try again in a moment.`
+                                 : `Couldn't reach ${esc(place.city)} right now. Staying in ${esc(SET.edition)}.`);
       }
     }
     paintMachine();
@@ -465,7 +470,7 @@
   const getStash = (setKey) => load(stashKey(setKey), {});
   function stashIndex() {
     const idx = load("stashIndex", null) || {};
-    if (!idx[LOCAL.key] && Object.keys(getStash(LOCAL.key)).length) { // carry over older saves
+    if (DEV && !idx[LOCAL.key] && Object.keys(getStash(LOCAL.key)).length) { // carry over older saves
       idx[LOCAL.key] = { edition: LOCAL.edition, ids: LOCAL.prints.map((x) => x.id), theme: 0, updated: 0 };
     }
     try {
@@ -496,7 +501,7 @@
     const idx = stashIndex();
     const places = Object.entries(idx)
       .map(([key, meta]) => ({ key, ...meta, got: meta.ids.filter((id) => getStash(key)[id]) }))
-      .filter((pl) => pl.got.length)
+      .filter((pl) => pl.got.length && (DEV || pl.key !== LOCAL.key)) // hand-drawn stand-ins never show on the live site
       .sort((a, b) => b.updated - a.updated);
     const total = places.reduce((n, pl) => n + pl.got.length, 0);
     $("tally").innerHTML = total
@@ -621,6 +626,11 @@
   }
 
   async function pushIn(i) {
+    if (SET.blank) { // no city loaded yet (live site): hand the quarters back
+      closeSlot(i, true);
+      say("The machine's still finding its city ✶ tap the edition name to pick one.");
+      return;
+    }
     busy = true;
     slotEls.forEach((s) => s.setAttribute("aria-disabled", "true"));
     closeSlot(i, false);
@@ -789,6 +799,18 @@
       try {
         p = await ready;
       } catch (err) {
+        if (!DEV) { // live site: no stand-in print. The press "jams" and the dollar comes back.
+          console.warn("Print couldn't be made; refunding:", err);
+          overlay.classList.remove("show");
+          await wait(300);
+          overlay.hidden = true;
+          busy = false;
+          slotEls.forEach((s) => s.removeAttribute("aria-disabled"));
+          say(err?.limited
+            ? `Out of ink for now ✶ your dollar's back. Try again in about ${minutesUntil(err.resetAt)} min.`
+            : "The press jammed ✶ your dollar's back. Give it another try in a moment.");
+          return;
+        }
         console.warn("Falling back to a New York print:", err);
         from = LOCAL;
         const fallbackId = pick(LOCAL);
