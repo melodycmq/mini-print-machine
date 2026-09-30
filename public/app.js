@@ -192,22 +192,24 @@
   let flipping = false, flapTimer = null;
   // Each sticker flips top-over like a reel; the picture changes exactly when it's edge-on (invisible),
   // and always to a different one, so it reads as flipping through random pictures.
-  async function flipCard(li, faces, delay) {
+  // `faces` is a function so the flip always draws from the latest pool (it may arrive mid-spin).
+  async function flipCard(li, facesNow, delay) {
     await sleep(delay);
     const half = RM ? 1 : 28; // ~60ms per flip: too fast to follow, reads as a blur of pictures
     let current = -1;
     while (flipping) {
-      await li.animate([{ transform: "rotateX(0deg)" }, { transform: "rotateX(90deg)" }], { duration: half, easing: "linear" }).finished;
+      await Promise.race([li.animate([{ transform: "rotateX(0deg)" }, { transform: "rotateX(90deg)" }], { duration: half, easing: "linear" }).finished, sleep(half + 40)]);
+      const faces = facesNow();
       let next;
       do next = (Math.random() * faces.length) | 0; while (next === current && faces.length > 1);
       current = next;
       li.innerHTML = faces[next];
-      await li.animate([{ transform: "rotateX(-90deg)" }, { transform: "rotateX(0deg)" }], { duration: half, easing: "linear" }).finished;
+      await Promise.race([li.animate([{ transform: "rotateX(-90deg)" }, { transform: "rotateX(0deg)" }], { duration: half, easing: "linear" }).finished, sleep(half + 40)]);
     }
   }
   // Stickers from every city drawn so far, preloaded so they show instantly while the machine spins.
   let reelFaces = [];
-  fetch("/api/reel").then((r) => (r.ok ? r.json() : { faces: [] })).then(({ faces }) => {
+  const reelReady = fetch("/api/reel").then((r) => (r.ok ? r.json() : { faces: [] })).then(({ faces }) => {
     reelFaces = (faces || []).map((url) => { new Image().src = url; return artFor({ image: url, thumb: url }, "lineup"); });
   }).catch(() => {});
   let colorTimer = null;
@@ -224,8 +226,8 @@
       }, 170);
     }
     window.MiniPrintMap?.travel(true);
-    const faces = reelFaces.length >= 8 ? reelFaces
-      : [...new Set([...SET.prints, ...LOCAL.prints].map((p) => artFor(p, "lineup")))];
+    const fallback = [...new Set([...SET.prints, ...LOCAL.prints].map((p) => artFor(p, "lineup")))];
+    const faces = () => (reelFaces.length >= 8 ? reelFaces : fallback); // switches to the saved pool the moment it arrives
     flipping = true;
     $("lineup").querySelectorAll("li").forEach((li, i) => flipCard(li, faces, i * 45));
     let frameNo = 0;
@@ -275,6 +277,7 @@
     }
     busy = true;
     slotEls.forEach((s) => s.setAttribute("aria-disabled", "true"));
+    if (first) await Promise.race([reelReady, sleep(1000)]); // so the first spin flips through saved stickers, not placeholders
     const started = Date.now();
     say(place ? `Traveling to ${esc(place.city)}…` : "Finding where you are…");
     startSpin(switching);
