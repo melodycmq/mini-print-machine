@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
-import { redis, redisConfig, keys, slug, locate } from "../lib/store.js";
+import { redis, redisConfig, keys, slug, locate, markOutOfCredits, isAnthropicCreditError } from "../lib/store.js";
 import { findCity } from "../lib/cities.js";
 import { BRIGHTS, PASTELS, toPaletteInks } from "../lib/palette.js";
 
@@ -48,6 +48,11 @@ export default async function handler(req, res) {
       }),
     });
   } catch (err) {
+    if (isAnthropicCreditError(err)) {
+      console.error("set failed: Anthropic credit balance is empty - top up at console.anthropic.com", cityKey);
+      await markOutOfCredits("anthropic");
+      return res.status(503).json({ error: "out_of_ink", step: "claude" });
+    }
     console.error("set failed", cityKey, step.name, err);
     res.status(502).json({
       error: "Couldn't load prints for this area.",

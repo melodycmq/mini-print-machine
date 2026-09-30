@@ -1,4 +1,4 @@
-import { ratelimit, visitorId, generationsPerHour, dailyBudgetLeft, nextUtcMidnight } from "../lib/store.js";
+import { ratelimit, visitorId, generationsPerHour, dailyBudgetLeft, nextUtcMidnight, outOfCredits } from "../lib/store.js";
 
 // GET /api/quota → { remaining, resetAt, limitedBy }
 // How many new drawings can still be started for this visitor right now: the lower of their hourly allowance
@@ -7,6 +7,7 @@ import { ratelimit, visitorId, generationsPerHour, dailyBudgetLeft, nextUtcMidni
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   try {
+    if (await outOfCredits()) return res.status(200).json({ remaining: 0, resetAt: null, limitedBy: "credits" });
     const [{ remaining: hourly, reset }, daily] = await Promise.all([ratelimit.getRemaining(visitorId(req)), dailyBudgetLeft()]);
     const dailyIsTighter = daily < hourly;
     res.status(200).json({

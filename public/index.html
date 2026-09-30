@@ -245,6 +245,17 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .status b { color: var(--red); font-weight: 400; }
 
 .fly-coin { position: fixed; z-index: 50; pointer-events: none; }
+
+/* Toast: problems pop up here (a little paper card like everything else), not in the machine's status line. */
+.toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70;
+  max-width: min(420px, calc(100vw - 32px)); padding: 12px 18px; cursor: pointer; isolation: isolate;
+  font-family: var(--hand); font-size: 1rem; line-height: 1.35; color: var(--ink); text-align: center;
+  transform: translate(-50%, 16px) rotate(-1deg); opacity: 0; transition: transform .35s cubic-bezier(.3,1.5,.5,1), opacity .25s;
+}
+.toast::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--paper-grain), #FBF8F1; border: 2px solid var(--ink); border-radius: 10px 7px 11px 8px; filter: url(#rough); }
+.toast::after { content: ""; position: absolute; inset: 0; z-index: -2; transform: translate(5px, 6px); border-radius: 10px 7px 11px 8px; background: var(--shade-out); filter: url(#rough); }
+.toast.show { transform: translate(-50%, 0) rotate(-1deg); opacity: 1; }
 .coin { display: block; }
 
 /* ---------- print art: hand-drawn SVG (NYC fallback) or a generated image ---------- */
@@ -555,6 +566,7 @@ footer a { color: #E0312B; } /* fixed tomato red, same as the red envelope stamp
 </div>
 
 <ul class="city-list" id="city-list" role="listbox" hidden></ul>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="/map.js"></script>
 <script src="/nyc-prints.js"></script>

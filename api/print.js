@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { put } from "@vercel/blob";
-import { redis, ratelimit, keys, visitorId, takeFromDailyBudget, refundDailyBudget, nextUtcMidnight } from "../lib/store.js";
+import { redis, ratelimit, keys, visitorId, takeFromDailyBudget, refundDailyBudget, nextUtcMidnight, markOutOfCredits, isOpenAICreditError } from "../lib/store.js";
 import { printPrompt } from "../lib/style-prompt.js";
 import { separate } from "../lib/separate.js";
 
@@ -77,6 +77,11 @@ export default async function handler(req, res) {
     return res.status(200).json({ status: "ready", ...record });
   } catch (err) {
     if (charged) await refundDailyBudget(); // nothing was made, so it shouldn't count against today's cap
+    if (isOpenAICreditError(err)) { // an empty balance is not "busy": don't let the page keep retrying
+      console.error("print failed: OpenAI credit balance is empty - top up at platform.openai.com", key, id);
+      await markOutOfCredits("openai");
+      return res.status(503).json({ status: "out_of_ink" });
+    }
     if (err?.status === 429) return res.status(503).json({ status: "busy" }); // OpenAI rate limit: page retries
     console.error("print failed", key, id, err);
     return res.status(502).json({ status: "failed" });

@@ -21,6 +21,19 @@
   const save = (k, v) => { try { localStorage.setItem("npm-" + k, JSON.stringify(v)); } catch {} };
   const statusEl = $("status");
   const say = (html) => { statusEl.innerHTML = html; };
+  // Problems pop up as a toast; the machine's status line is only for what to do next.
+  const toastEl = document.getElementById("toast");
+  let toastTimer = null;
+  const toast = (html) => {
+    toastEl.innerHTML = html;
+    toastEl.hidden = false;
+    void toastEl.offsetWidth;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 6000);
+  };
+  const hideToast = () => { toastEl.classList.remove("show"); setTimeout(() => { if (!toastEl.classList.contains("show")) toastEl.hidden = true; }, 300); };
+  toastEl.addEventListener("click", hideToast);
   if (RM) document.querySelectorAll("animate.boil").forEach((a) => a.remove());
 
   // A print is either hand-drawn (has `shapes`) or generated (has `image` once it exists).
@@ -182,6 +195,10 @@
         const j = await r.json().catch(() => ({}));
         throw Object.assign(new Error("unsupported"), { unsupported: true, detail: j.detail });
       }
+      if (r.status === 503) {
+        const j = await r.json().catch(() => ({}));
+        if (j.error === "out_of_ink") throw Object.assign(new Error("out of ink"), { limited: true, resetAt: null });
+      }
       if (!r.ok) throw new Error(`set ${r.status}`);
       const data = await r.json();
       if (!Array.isArray(data.prints) || data.prints.length !== 6) throw new Error("bad set");
@@ -255,7 +272,10 @@
     const min = Math.max(1, Math.ceil(((resetAt || Date.now() + 3600e3) - Date.now()) / 60000));
     return min < 90 ? `${min} min` : `${Math.round(min / 60)} hr`;
   };
-  const outOfInk = (resetAt) => `The printer's out of ink for now ✶ it'll be ready again in about ${untilText(resetAt)}.`;
+  // With a refill time (the hourly or daily cap) it says when; without one (Anthropic/OpenAI credits ran out) it doesn't.
+  const outOfInk = (resetAt) => resetAt
+    ? `The printer's out of ink for now ✶ it'll be ready again in about ${untilText(resetAt)}.`
+    : "The printer's out of ink ✶ it'll be back soon.";
 
   // Would this trip need more new drawings than the visitor has left this hour? Cities that are already drawn
   // are always fine; unknown answers (a network hiccup) let the trip go ahead.
@@ -266,6 +286,7 @@
       let needed = 6;
       if (peek.ok) needed = (await peek.json()).prints.filter((p) => !p.image).length;
       if (!needed || quota.remaining == null) return null;
+      if (quota.limitedBy === "credits") return quota;
       return quota.remaining < needed ? quota : null;
     } catch {
       return null;
@@ -278,7 +299,7 @@
     const blocked = await tripBlocked(place);
     if (blocked) {
       cityName.textContent = SET.edition; // stay put: no spin, no map, no color change
-      say(outOfInk(blocked.resetAt));
+      toast(outOfInk(blocked.resetAt));
       return;
     }
     busy = true;
@@ -314,16 +335,17 @@
       if (switching) newTheme(); // lands on a color different from the one we left
       else applyTheme();
       SET = next;
-      say(limitedAt ? outOfInk(limitedAt.resetAt) : "Pick a slot to start.");
+      say("Pick a slot to start.");
+      if (limitedAt) toast(outOfInk(limitedAt.resetAt));
       sfx.chime();
     } else {
       applyTheme(); // the trip didn't happen: back to the color we had
-      if (problem?.unsupported) {
-        say(esc(problem.detail || "We don't print for that place yet."));
-      } else {
+      say(SET.blank ? "Tap the edition name to pick a city." : "Pick a slot to start.");
+      if (problem?.limited) toast(outOfInk(problem.resetAt));
+      else if (problem?.unsupported) toast(esc(problem.detail || "We don't print for that place yet."));
+      else {
         console.warn("Couldn't load a set:", problem);
-        if (place) say(SET.blank ? `Couldn't reach ${esc(place.city)} right now ✶ try again in a moment.`
-                                 : `Couldn't reach ${esc(place.city)} right now. Staying in ${esc(SET.edition)}.`);
+        toast(place ? `Couldn't reach ${esc(place.city)} right now ✶ try again in a moment.` : "Couldn't find where you are ✶ tap the edition name to pick a city.");
       }
     }
     paintMachine();
@@ -628,7 +650,7 @@
   async function pushIn(i) {
     if (SET.blank) { // no city loaded yet (live site): hand the quarters back
       closeSlot(i, true);
-      say("The machine's still finding its city ✶ tap the edition name to pick one.");
+      toast("The machine's still finding its city ✶ tap the edition name to pick one.");
       return;
     }
     busy = true;
@@ -694,6 +716,7 @@
         const j = await r.json().catch(() => ({}));
         if (j.status === "busy") { await sleep(6000); continue; } // the image service is catching up
         if (j.status === "limited") throw Object.assign(new Error("limited"), { limited: true, resetAt: j.resetAt });
+        if (j.status === "out_of_ink") throw Object.assign(new Error("out of ink"), { limited: true, resetAt: null });
       }
       if (r.status === 429) {
         const j = await r.json().catch(() => ({}));
@@ -807,7 +830,8 @@
           overlay.hidden = true;
           busy = false;
           slotEls.forEach((s) => s.removeAttribute("aria-disabled"));
-          say(err?.limited
+          say("Pick a slot for another surprise.");
+          toast(err?.limited
             ? `${outOfInk(err.resetAt)} Your dollar's back.`
             : "The press jammed ✶ your dollar's back. Give it another try in a moment.");
           return;
