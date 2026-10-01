@@ -82,17 +82,24 @@ export default async function handler(req, res) {
   }
 }
 
-// Ask for a transparent background (the card is the paper). Some image models don't support that; for those, ask
-// again without it - lib/separate.js knocks out a painted background and turns near-white into paper anyway.
+// Ask for a transparent background (the card is the paper). Some image models don't support that (OpenAI's
+// gpt-image-2 alias stopped accepting it); for those, ask for a plain pure-white background instead, which
+// lib/separate.js removes cleanly. Each server instance remembers the refusal so it doesn't ask twice per draw.
+let transparentUnsupported = false;
+const onWhite = (prompt) => prompt
+  .replace("背景完全透明，不要任何环境或背景元素。", "背景为纯白色（#FFFFFF），平整均匀，不要任何环境或背景元素。")
+  .replace("背景完全透明，不要纸张、不要底色、不要纸纹、不要边框、不要阴影或桌面。", "背景为纯白色（#FFFFFF），平整均匀，不要纸纹、不要纹理、不要边框、不要阴影或桌面。");
+
 export async function drawImage(prompt) {
-  const base = { model: IMAGE_MODEL, prompt, size: "1024x1536", quality: IMAGE_QUALITY, output_format: "png", n: 1 };
-  try {
-    return await openai.images.generate({ ...base, background: "transparent" });
-  } catch (err) {
-    if (err?.status === 400 && (err.param === "background" || err.error?.param === "background")) {
-      console.warn(`${IMAGE_MODEL} doesn't support transparent backgrounds; drawing on an opaque one instead`);
-      return await openai.images.generate(base);
+  const base = { model: IMAGE_MODEL, size: "1024x1536", quality: IMAGE_QUALITY, output_format: "png", n: 1 };
+  if (!transparentUnsupported) {
+    try {
+      return await openai.images.generate({ ...base, prompt, background: "transparent" });
+    } catch (err) {
+      if (!(err?.status === 400 && (err.param === "background" || err.error?.param === "background"))) throw err;
+      transparentUnsupported = true;
+      console.warn(`${IMAGE_MODEL} doesn't support transparent backgrounds; drawing on plain white instead`);
     }
-    throw err;
   }
+  return await openai.images.generate({ ...base, prompt: onWhite(prompt) });
 }
