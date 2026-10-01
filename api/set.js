@@ -143,6 +143,8 @@ background, and no people unless the subject itself is one iconic figure.
 For each print give an id, a 1–4 word English title, a short location label for the card, and "subject_zh": one
 sentence in Chinese for an illustrator describing just that object: what it is, its most recognizable silhouette or
 pose, and at most one small charming detail. Nothing with written words.
+Titles use the name an English-speaking local or an English menu would use: the established English or romanized name
+("Yuanyang Hotpot", not "Mandarin Duck Hotpot"; "Xiaolongbao" or "Soup Dumplings"), never a word-for-word translation.
 
 Ink each print like a cheerful hand-pulled print, choosing colors by name from this palette only:
 - exactly ONE bright hero ink (rarely two): ${Object.keys(BRIGHTS).join(", ")}. It carries the main shape and also draws the
@@ -172,7 +174,7 @@ const PRINT_SET_SCHEMA = {
         type: "object",
         properties: {
           id: { type: "string", description: "Short lowercase slug, unique within the set." },
-          title: { type: "string", description: "1–4 word English name of the subject." },
+          title: { type: "string", description: "1–4 word English name of the subject, as an English-speaking local or an English menu would say it: the established English or romanized name (e.g. \"Yuanyang Hotpot\", \"Xiaolongbao\", \"Dollar Slice\"), never a word-for-word translation of an idiom or proper name." },
           kind: { type: "string", description: 'The generic kind of thing in one plain English word or two, e.g. "dumpling", "tower", "bicycle", "cat", "dress". Different varieties of the same thing share a kind. Must differ across all six.' },
           where: { type: "string", description: "Short English location label printed on the card (a street, neighborhood, park or venue; max 24 characters)." },
           subject_zh: { type: "string", description: "One sentence in Chinese describing just that object for an illustrator: what it is, its most recognizable silhouette or pose, and at most one small charming detail. No scene, no background, nothing with written words." },
