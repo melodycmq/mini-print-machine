@@ -45,15 +45,7 @@ export default async function handler(req, res) {
     charged = true;
 
     const t0 = Date.now();
-    const result = await openai.images.generate({
-      model: IMAGE_MODEL,
-      prompt: printPrompt(print.subject_zh, print.inks),
-      size: "1024x1536",
-      quality: IMAGE_QUALITY,
-      background: "transparent", // no paper: the card on the page is the paper
-      output_format: "png",
-      n: 1,
-    });
+    const result = await drawImage(printPrompt(print.subject_zh, print.inks));
     const png = Buffer.from(result.data[0].b64_json, "base64");
     const t1 = Date.now();
 
@@ -87,5 +79,20 @@ export default async function handler(req, res) {
     return res.status(502).json({ status: "failed" });
   } finally {
     await redis.del(keys.lock(key, id));
+  }
+}
+
+// Ask for a transparent background (the card is the paper). Some image models don't support that; for those, ask
+// again without it - lib/separate.js knocks out a painted background and turns near-white into paper anyway.
+export async function drawImage(prompt) {
+  const base = { model: IMAGE_MODEL, prompt, size: "1024x1536", quality: IMAGE_QUALITY, output_format: "png", n: 1 };
+  try {
+    return await openai.images.generate({ ...base, background: "transparent" });
+  } catch (err) {
+    if (err?.status === 400 && (err.param === "background" || err.error?.param === "background")) {
+      console.warn(`${IMAGE_MODEL} doesn't support transparent backgrounds; drawing on an opaque one instead`);
+      return await openai.images.generate(base);
+    }
+    throw err;
   }
 }
