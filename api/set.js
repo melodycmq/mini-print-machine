@@ -131,7 +131,10 @@ function subjectPrompt(where) {
 Pick 6 things that are iconic and instantly recognizable as this place: its famous foods and drinks, landmarks,
 well-known symbols, beloved local animals and everyday objects that everyone associates with it. Anyone who has visited
 (or seen it in films) should recognize each one right away. One or two can be charming or playful, but avoid obscure or
-insider-only references. If the place is small, draw from its surrounding region.
+insider-only references. If the place sits inside a larger city or metro (a borough, neighborhood or neighboring
+city), pick what is specific to it, not the wider area's general icons; draw from the surroundings only if it is tiny.
+Never pick anything recognized mainly by its lettering (signs, logos, neon words, the Hollywood sign): words can't be
+drawn reliably.
 
 All six must be clearly different from each other: never two of the same kind of thing (one pizza at most, one cat at
 most, one coffee at most, one dumpling of any variety, and so on; label each with its generic "kind"), spread across different categories (food or drink, a landmark or symbol, an
@@ -142,7 +145,7 @@ background, and no people unless the subject itself is one iconic figure.
 
 For each print give an id, a 1–4 word English title, a short location label for the card, and "subject_zh": one
 sentence in Chinese for an illustrator describing just that object: what it is, its most recognizable silhouette or
-pose, and at most one small charming detail. Nothing with written words.
+pose, and at most one small charming detail.
 Titles use the name an English-speaking local or an English menu would use: the established English or romanized name
 ("Yuanyang Hotpot", not "Mandarin Duck Hotpot"; "Xiaolongbao" or "Soup Dumplings"), never a word-for-word translation.
 
