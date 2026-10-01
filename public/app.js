@@ -125,7 +125,6 @@
   function paintMachine() {
     cityName.textContent = SET.edition;
     cityName.setAttribute("aria-label", `${SET.edition}. Change city`);
-    document.title = `${SET.edition} Mini Print Machine`;
     paintLineup();
     paintStash();
     fitMachine();
