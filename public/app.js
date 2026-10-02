@@ -212,33 +212,25 @@
   let flipping = false, flapTimer = null;
   // Each sticker flips top-over like a reel; the picture changes exactly when it's edge-on (invisible),
   // and always to a different one, so it reads as flipping through random pictures.
-  // While traveling each sticker spins like a slot-machine reel: the current picture slides down and out while the next
-  // slides in from above, at full height the whole way (no squashing). `facesNow` is a function so the reel always
-  // draws from the latest pool (it may arrive mid-spin). Each of the six positions only ever draws from its own slice
-  // of the pool (every 6th face), so the slices never overlap and no picture can show in two spots at once.
-  const REEL_MS = 110;
+  // While traveling each sticker flips over and over; its picture changes exactly when it's edge-on. `facesNow` is a
+  // function so the flip always draws from the latest pool (it may arrive mid-spin). Every spot picks from the whole
+  // pool but skips whatever the other spots are showing right now, so there's lots of variety and never a duplicate.
+  const showing = new Array(6).fill(null);
   async function flipCard(li, facesNow, delay, slot) {
     await sleep(delay);
-    const dur = RM ? 1 : REEL_MS;
-    let current = -1;
+    const half = RM ? 1 : 28; // ~60ms per flip: too fast to follow, reads as a blur of pictures
+    // Wait for each half-flip to finish (so the swap lands edge-on); the timeout only rescues a truly stalled animation.
+    const turn = (from, to) => Promise.race([li.animate([{ transform: `rotateX(${from}deg)` }, { transform: `rotateX(${to}deg)` }], { duration: half, easing: "linear" }).finished, sleep(half + 250)]);
     while (flipping) {
-      const all = facesNow();
-      const mine = all.filter((_, k) => k % 6 === slot);
-      const faces = mine.length ? mine : all.slice(slot, slot + 1);
-      if (!faces.length) { await sleep(120); continue; }
-      let next;
-      do next = (Math.random() * faces.length) | 0; while (next === current && faces.length > 1);
-      current = next;
-      const out = document.createElement("div"), inn = document.createElement("div");
-      out.className = inn.className = "reel-face";
-      out.append(...li.childNodes);
-      inn.innerHTML = faces[next];
-      li.replaceChildren(out, inn);
-      const slide = out.animate([{ transform: "translateY(0)" }, { transform: "translateY(100%)" }], { duration: dur, easing: "linear" });
-      inn.animate([{ transform: "translateY(-100%)" }, { transform: "translateY(0)" }], { duration: dur, easing: "linear" });
-      await Promise.race([slide.finished, sleep(dur + 200)]); // never let a stalled animation hold the reel
-      if (inn.isConnected) li.replaceChildren(...inn.childNodes);
+      await turn(0, 90);
+      const faces = facesNow();
+      const taken = new Set(showing.filter((f, i) => i !== slot && f !== null));
+      const choices = faces.filter((f) => !taken.has(f) && f !== showing[slot]);
+      const next = choices.length ? choices[(Math.random() * choices.length) | 0] : faces[slot % Math.max(1, faces.length)];
+      if (next !== undefined) { showing[slot] = next; li.innerHTML = next; }
+      await turn(-90, 0);
     }
+    showing[slot] = null;
   }
 
   // Stickers from every city drawn so far, preloaded so they show instantly while the machine spins.

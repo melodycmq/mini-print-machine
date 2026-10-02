@@ -167,9 +167,9 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .lineup li:hover .art { transform: rotate(-8deg) scale(1.15); }
 .machine-wrap.traveling { animation: hum .42s linear infinite; }
 @keyframes hum { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-.6px,.4px); } 50% { transform: translate(.5px,-.5px); } 75% { transform: translate(-.3px,-.3px); } }
-/* While traveling, app.js spins each sticker like a slot-machine reel: pictures slide down through the spot. */
-.machine-wrap.traveling .lineup li { animation: none; overflow: hidden; }
-.reel-face { position: absolute; inset: 0; will-change: transform; }
+/* While traveling, app.js flips each sticker over and over, swapping to a new picture each time it's edge-on. */
+.machine-wrap.traveling .lineup { perspective: 500px; }
+.machine-wrap.traveling .lineup li { animation: none; }
 .machine-wrap.traveling .edition { animation: flap .11s steps(2) infinite; }
 @keyframes flap { 50% { transform: rotate(-2deg) translateY(-1px); } }
 .lineup.landed li { animation: land .55s cubic-bezier(.3,1.6,.5,1) backwards, bob 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * 70ms), calc(var(--i) * -.53s); }
