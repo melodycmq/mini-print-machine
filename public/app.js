@@ -230,8 +230,8 @@
   // Each sticker flips top-over like a reel; the picture changes exactly when it's edge-on (invisible),
   // and always to a different one, so it reads as flipping through random pictures.
   // While traveling each sticker flips over and over; its picture changes exactly when it's edge-on. `facesNow` is a
-  // function so the flip always draws from the latest pool (it may arrive mid-spin). Every spot picks from the whole
-  // pool but skips whatever the other spots are showing right now, so there's lots of variety and never a duplicate.
+  // function so the flip always draws from the latest pool (it may arrive mid-spin). Each spot only ever draws from its
+  // own fixed slice of the pool (every 6th picture), so the slices never overlap and no picture shows in two spots.
   const showing = new Array(6).fill(null);
   async function flipCard(li, facesNow, delay, slot) {
     await sleep(delay);
@@ -241,8 +241,8 @@
     while (flipping) {
       await turn(0, 90);
       const faces = facesNow();
-      const taken = new Set(showing.filter((f, i) => i !== slot && f !== null));
-      const choices = faces.filter((f) => !taken.has(f) && f !== showing[slot]);
+      const mine = faces.filter((_, k) => k % 6 === slot);
+      const choices = mine.filter((f) => f !== showing[slot]);
       const next = choices.length ? choices[(Math.random() * choices.length) | 0] : faces[slot % Math.max(1, faces.length)];
       if (next !== undefined) { showing[slot] = next; li.innerHTML = next; }
       await turn(-90, 0);
