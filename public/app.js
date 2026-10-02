@@ -218,7 +218,7 @@
   const showing = new Array(6).fill(null);
   async function flipCard(li, facesNow, delay, slot) {
     await sleep(delay);
-    const half = RM ? 1 : 28; // ~60ms per flip: too fast to follow, reads as a blur of pictures
+    const half = RM ? 1 : 45; // ~100ms per flip: fast, but each picture is glimpsed
     // Wait for each half-flip to finish (so the swap lands edge-on); the timeout only rescues a truly stalled animation.
     const turn = (from, to) => Promise.race([li.animate([{ transform: `rotateX(${from}deg)` }, { transform: `rotateX(${to}deg)` }], { duration: half, easing: "linear" }).finished, sleep(half + 250)]);
     while (flipping) {
