@@ -212,14 +212,19 @@
   let flipping = false, flapTimer = null;
   // Each sticker flips top-over like a reel; the picture changes exactly when it's edge-on (invisible),
   // and always to a different one, so it reads as flipping through random pictures.
-  // `faces` is a function so the flip always draws from the latest pool (it may arrive mid-spin).
-  async function flipCard(li, facesNow, delay) {
+  // `facesNow` is a function so the flip always draws from the latest pool (it may arrive mid-spin). Each of the six
+  // positions only ever draws from its own slice of the pool (every 6th face), so the slices never overlap and no
+  // picture can show in two spots at once.
+  async function flipCard(li, facesNow, delay, slot) {
     await sleep(delay);
     const half = RM ? 1 : 28; // ~60ms per flip: too fast to follow, reads as a blur of pictures
     let current = -1;
     while (flipping) {
       await Promise.race([li.animate([{ transform: "rotateX(0deg)" }, { transform: "rotateX(90deg)" }], { duration: half, easing: "linear" }).finished, sleep(half + 40)]);
-      const faces = facesNow();
+      const all = facesNow();
+      const mine = all.filter((_, k) => k % 6 === slot);
+      const faces = mine.length ? mine : all.slice(slot, slot + 1);
+      if (!faces.length) { await sleep(120); continue; }
       let next;
       do next = (Math.random() * faces.length) | 0; while (next === current && faces.length > 1);
       current = next;
@@ -249,7 +254,7 @@
     const fallback = [...new Set([...SET.prints, ...(DEV ? LOCAL.prints : [])].map((p) => artFor(p, "lineup")))];
     const faces = () => (reelFaces.length >= 8 ? reelFaces : fallback); // switches to the saved pool the moment it arrives
     flipping = true;
-    $("lineup").querySelectorAll("li").forEach((li, i) => flipCard(li, faces, i * 45));
+    $("lineup").querySelectorAll("li").forEach((li, i) => flipCard(li, faces, i * 45, i));
     let frameNo = 0;
     flapTimer = setInterval(() => {
       if (cityNames.length) cityName.textContent = cityNames[(Math.random() * cityNames.length) | 0];
