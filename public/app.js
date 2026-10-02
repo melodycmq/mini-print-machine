@@ -38,7 +38,7 @@
 
   // A print is either hand-drawn (has `shapes`) or generated (has `image` once it exists).
   // where: "lineup" (the machine's stickers), "tile" (stash), or "card" (the print being pulled or viewed).
-  function artFor(p, where) {
+  function artFor(p, where, slot) {
     if (p.shapes) return artSVG(p, where === "lineup" ? "20 18 80 80" : undefined);
     if (where === "card" && p.layers?.length) {
       const off = () => (Math.random() * 3 - 1.5).toFixed(1); // misregistration, a pixel or two per ink
@@ -47,8 +47,25 @@
     }
     const src = where === "lineup" ? p.thumb || p.image : p.image;
     if (src) return `<span class="art photo" aria-hidden="true"><img class="fills" src="${esc(src)}" alt="" decoding="async"></span>`;
-    return `<span class="art pending" aria-hidden="true"><span>${where === "card" ? "inking…" : "?"}</span></span>`;
+    if (where === "card") return `<span class="art pending" aria-hidden="true"><span>inking…</span></span>`;
+    return placeholderArt(slot ?? 0);
   }
+
+  // A not-yet-drawn sticker: a soft grey silhouette (one of six shapes, by spot) with a sketchy outline and a
+  // little offset shadow, gently pulsing like something that's loading.
+  const PLACEHOLDER_SHAPES = [
+    '<circle cx="50" cy="50" r="30"/>',
+    '<rect x="22" y="22" width="56" height="56" rx="12"/>',
+    '<rect x="27" y="18" width="46" height="62" rx="5" transform="rotate(-8 50 50)"/>',
+    '<path d="M50 20c17 0 29 11 29 27 0 19-14 33-31 33-16 0-28-12-28-28 0-19 13-32 30-32z"/>',
+    '<path d="M50 20c4 0 7 2 9 6l20 40c3 6-1 12-8 12H29c-7 0-11-6-8-12l20-40c2-4 5-6 9-6z"/>',
+    '<rect x="16" y="34" width="68" height="32" rx="16"/>',
+  ];
+  const placeholderArt = (slot) => {
+    const shape = PLACEHOLDER_SHAPES[slot % PLACEHOLDER_SHAPES.length];
+    return `<span class="art placeholder" aria-hidden="true" style="--slot:${slot}"><svg viewBox="0 0 100 100">
+      <g class="ph-shadow" transform="translate(4 5)">${shape}</g><g class="ph-body" filter="url(#pen)">${shape}</g></svg></span>`;
+  };
 
   const coinSVG = `<svg class="coin" viewBox="0 0 40 40" aria-hidden="true"><g filter="url(#crayon-line)">
     <circle cx="20" cy="20" r="18" fill="#DADCE8" stroke="#6C7399" stroke-width="2.2" stroke-dasharray="1.4 1.6"/>
@@ -154,7 +171,7 @@
   document.fonts?.ready.then(fitMachine);
   function paintLineup() {
     $("lineup").innerHTML = SET.prints.map((p, i) =>
-      `<li style="--i:${i}"><span class="sr-only">${esc(p.title)}</span>${artFor(p, "lineup")}</li>`).join("");
+      `<li style="--i:${i}"><span class="sr-only">${esc(p.title)}</span>${artFor(p, "lineup", i)}</li>`).join("");
   }
 
   // ---------- theme color: a new one for every city you travel to ----------

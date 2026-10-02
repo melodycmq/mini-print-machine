@@ -271,6 +271,11 @@ h1:hover .ch { transform: translateY(-2px) rotate(var(--r2)) !important; }
 .art.layers img { clip-path: inset(0 100% 0 0); transform: translate(var(--dx, 0px), var(--dy, 0px)); }
 .inside.rolled .art.layers img, .inside.pulled .art.layers img { clip-path: inset(0 0 0 0); }
 .art.pending { display: grid; place-items: center; }
+/* Not-yet-drawn stickers: soft grey silhouettes with a sketchy outline and offset shadow, pulsing gently. */
+.art.placeholder { animation: ph-pulse 1.8s ease-in-out infinite; animation-delay: calc(var(--slot) * -.3s); }
+.art.placeholder .ph-shadow { fill: rgb(42 45 94 / .07); }
+.art.placeholder .ph-body { fill: #E6E7EF; stroke: #B7BBD3; stroke-width: 2; stroke-linejoin: round; }
+@keyframes ph-pulse { 0%, 100% { opacity: .95; } 50% { opacity: .55; } }
 .art.pending span { font-family: var(--display); font-weight: 700; font-size: 1.4rem; letter-spacing: .12em; color: rgb(98 93 122 / .6); animation: blink 1.4s ease-in-out infinite; }
 
 /* ---------- stash ---------- */
